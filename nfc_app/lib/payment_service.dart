@@ -35,7 +35,8 @@ class PaymentService {
   }
 
   Future<void> _save() async {
-    await storageFile.writeAsString(jsonEncode(_data.toJson()));
+    final encoder = const JsonEncoder.withIndent('  ');
+    await storageFile.writeAsString(encoder.convert(_data.toJson()));
   }
 
   CardRecord? getCard(String uid) => _data.cardByUid(uid);
