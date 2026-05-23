@@ -1,0 +1,81 @@
+language: c
+
+matrix:
+  include:
+    - os: windows
+      compiler:
+        - clang
+      before_install:
+        - mkdir build && cd build && wget "https://github.com/libusb/libusb/releases/download/v1.0.29/libusb-1.0.29.7z" && 7z x libusb-1.0.29.7z -o"$PROGRAMFILES/libusb"
+      install:
+        choco install doxygen.install ninja
+      script:
+        cmake -GNinja .. && cmake --build .
+
+    - os: linux
+      dist: bionic
+      compiler:
+        - clang
+      addons:
+        apt:
+          packages:
+            - libusb-1.0-0-dev
+            - doxygen
+            - cmake
+      script:
+        - mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=~/.local .. && make -j2 && make install
+        
+    - os: linux
+      dist: bionic
+      compiler:
+        - clang
+      addons:
+        apt:
+          packages:
+            - libusb-1.0-0-dev
+            - doxygen
+      script:
+        - autoreconf -vfi && mkdir build && cd build && ../configure --prefix=$HOME/.local/ && make -j2 && make install
+
+    - os: linux
+      dist: bionic
+      compiler:
+        - gcc
+      addons:
+        apt:
+          packages:
+            - libusb-1.0-0-dev
+            - doxygen
+            - cmake
+      script:
+        - mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=~/.local .. && make -j2 && make install
+
+    - os: linux
+      dist: bionic
+      compiler:
+        - gcc
+      addons:
+        apt:
+          packages:
+            - libusb-1.0-0-dev
+            - doxygen
+      script:
+        - autoreconf -vfi && mkdir build && cd build && ../configure --prefix=$HOME/.local/ && make -j2 && make install
+
+    - os: osx
+      osx_image: xcode12
+      compiler:
+        - clang
+      before_install:
+        - brew install doxygen libusb
+      script:
+        - mkdir build && cd build && cmake -DCMAKE_INSTALL_PREFIX=~/.local .. && make -j2 && make install
+
+    - os: osx
+      osx_image: xcode12
+      compiler:
+        - clang
+      before_install:
+        - brew install doxygen libusb m4
+      script:
+        - autoreconf -vfi && mkdir build && cd build && ../configure --prefix=$HOME/.local/ && make -j2 && make install
