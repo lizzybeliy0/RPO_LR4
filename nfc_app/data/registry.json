@@ -3,9 +3,9 @@
     {
       "uid": "ab  87  7e  05",
       "ownerName": "Gilenko Lesha",
-      "balance": 9700,
+      "balance": 9650,
       "createdAt": "2026-05-23T19:01:55.217564",
-      "updatedAt": "2026-05-25T12:30:34.858637"
+      "updatedAt": "2026-05-25T12:48:47.222243"
     }
   ],
   "transactions": [
@@ -68,6 +68,16 @@
       "message": "Оплата проезда",
       "balanceAfter": 9700,
       "createdAt": "2026-05-25T12:30:34.858637"
+    },
+    {
+      "id": "1779702527222",
+      "cardUid": "ab  87  7e  05",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "message": "Оплата проезда",
+      "balanceAfter": 9650,
+      "createdAt": "2026-05-25T12:48:47.222243"
     }
   ]
 }
