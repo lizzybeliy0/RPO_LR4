@@ -9,7 +9,7 @@ INSERT INTO keys (data) VALUES ('key_f6e5d4c3b2a1');
 
 -- Insert sample cards
 INSERT INTO cards (number, balance, blocked, owner_name, key_id) 
-VALUES ('36 cb 20 06', 100000, 0, 'Belova Elizaveta', 1);
+VALUES ('36  cb  20  06', 100000, 0, 'Belova Elizaveta', 1);
 
 -- Insert sample terminals
 INSERT INTO terminals (serial, address, name) VALUES ('TERM-001', 'Metro Station 1', 'Metro Terminal 1');

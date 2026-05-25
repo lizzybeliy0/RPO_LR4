@@ -6,9 +6,19 @@ import 'api_service.dart';
 class PaymentService {
   final File storageFile = File('data/registry.json');
   late WalletData _data;
-  final ApiService _api = ApiService();
+  late ApiService _api;
+  String? _token;
 
   Future<void> load() async {
+    // Инициализируем API сервис
+    _api = ApiService(
+      baseUrl: 'https://localhost:8888/api/v1',
+      allowInsecureLocalhost: true,
+    );
+    
+    // Пробуем получить токен (если есть сохранённый)
+    await _loadToken();
+    
     await storageFile.parent.create(recursive: true);
     
     if (await storageFile.exists()) {
@@ -31,8 +41,23 @@ class PaymentService {
     await _save();
   }
 
+  Future<void> _loadToken() async {
+    final tokenFile = File('data/token.txt');
+    if (await tokenFile.exists()) {
+      _token = await tokenFile.readAsString();
+    } else {
+      // Если нет токена, логинимся как пользователь
+      _token = await _api.login('user', 'password123');
+      if (_token != null) {
+        await tokenFile.writeAsString(_token!);
+      }
+    }
+  }
+
   Future<void> _syncCardsFromBackend() async {
-    final backendCards = await _api.getCards();
+    if (_token == null) return;
+    
+    final backendCards = await _api.getCards(token: _token!);
     
     for (final backendCard in backendCards) {
       final uid = backendCard['number'];
@@ -56,7 +81,6 @@ class PaymentService {
 
   CardRecord? getCard(String uid) => _data.cardByUid(uid);
 
-  // Регистрация новой карты (только в локальный JSON)
   Future<bool> registerCard(String uid, String ownerName, int balance) async {
     if (_data.cardByUid(uid) != null) return false;
 
@@ -71,7 +95,6 @@ class PaymentService {
     return true;
   }
 
-  // Оплата (требует terminalId)
   Future<bool> pay(String uid, int amount, int terminalId) async {
     final card = _data.cardByUid(uid);
     if (card == null) return false;
@@ -94,12 +117,16 @@ class PaymentService {
     await _save();
     
     // Уведомляем бэкенд
-    await _api.notifyPayment(
+    final success = await _api.notifyPayment(
       cardNumber: uid,
       amount: amount,
       terminalId: terminalId,
       newBalance: card.balance,
     );
+    
+    if (!success) {
+      print('⚠️ Warning: Failed to notify backend');
+    }
     
     return true;
   }

@@ -3,7 +3,14 @@
     {
       "uid": "36  cb  20  06",
       "ownerName": "Belova Elizaveta",
-      "balance": 99800,
+      "balance": 99150,
+      "status": "active",
+      "keyId": 1
+    },
+    {
+      "uid": "ab  87  7e  05",
+      "ownerName": "Gilenko Lesha",
+      "balance": 950,
       "status": "active",
       "keyId": 1
     }
@@ -44,6 +51,132 @@
       "success": true,
       "balanceAfter": 99800,
       "createdAt": "2026-05-25T15:55:02.060550"
+    },
+    {
+      "id": "1779714714489",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99750,
+      "createdAt": "2026-05-25T16:11:54.489670"
+    },
+    {
+      "id": "1779714720627",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99700,
+      "createdAt": "2026-05-25T16:12:00.627259"
+    },
+    {
+      "id": "1779714729850",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99650,
+      "createdAt": "2026-05-25T16:12:09.850720"
+    },
+    {
+      "id": "1779715452522",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99600,
+      "createdAt": "2026-05-25T16:24:12.522545"
+    },
+    {
+      "id": "1779715457453",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99550,
+      "createdAt": "2026-05-25T16:24:17.453101"
+    },
+    {
+      "id": "1779715461939",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99500,
+      "createdAt": "2026-05-25T16:24:21.939443"
+    },
+    {
+      "id": "1779715467868",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99450,
+      "createdAt": "2026-05-25T16:24:27.868097"
+    },
+    {
+      "id": "1779716065487",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99400,
+      "createdAt": "2026-05-25T16:34:25.487533"
+    },
+    {
+      "id": "1779716075465",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99350,
+      "createdAt": "2026-05-25T16:34:35.465268"
+    },
+    {
+      "id": "1779716078464",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99300,
+      "createdAt": "2026-05-25T16:34:38.464728"
+    },
+    {
+      "id": "1779716081166",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99250,
+      "createdAt": "2026-05-25T16:34:41.166393"
+    },
+    {
+      "id": "1779716083121",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99200,
+      "createdAt": "2026-05-25T16:34:43.121248"
+    },
+    {
+      "id": "1779716142994",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99150,
+      "createdAt": "2026-05-25T16:35:42.994502"
+    },
+    {
+      "id": "1779716512107",
+      "cardUid": "ab  87  7e  05",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 950,
+      "createdAt": "2026-05-25T16:41:52.107695"
     }
   ]
 }
