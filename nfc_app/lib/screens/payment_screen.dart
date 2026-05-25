@@ -20,7 +20,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String _status = 'Готов к оплате';
   String? _cardOwner;
   int? _balance;
-  bool _paymentSuccess = false;
+  bool _showSuccess = false;
+  bool _showError = false;
+  bool _showTimeout = false;
+  Timer? _messageTimer;
+
+  void _showTemporaryMessage(String message, {bool isSuccess = false, bool isError = false, bool isTimeout = false}) {
+    setState(() {
+      _status = message;
+      _showSuccess = isSuccess;
+      _showError = isError;
+      _showTimeout = isTimeout;
+    });
+    
+    _messageTimer?.cancel();
+    _messageTimer = Timer(const Duration(seconds: 5), () {
+      setState(() {
+        _showSuccess = false;
+        _showError = false;
+        _showTimeout = false;
+        _status = 'Готов к оплате';
+        _cardOwner = null;
+        _balance = null;
+      });
+    });
+  }
 
   Future<void> _startPayment() async {
     if (_isWaiting) return;
@@ -29,7 +53,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _isWaiting = true;
       _remainingSeconds = 30;
       _status = 'Приложите карту...';
-      _paymentSuccess = false;
+      _showSuccess = false;
+      _showError = false;
+      _showTimeout = false;
     });
 
     Timer? timer;
@@ -52,8 +78,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final card = widget.paymentService.getCard(uid);
         
         if (card == null) {
+          _showTemporaryMessage('Карта не зарегистрирована', isError: true);
           setState(() {
-            _status = '❌ Карта не зарегистрирована';
             _isWaiting = false;
           });
           return;
@@ -66,13 +92,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           setState(() {
             _cardOwner = updatedCard?.ownerName;
             _balance = updatedCard?.balance;
-            _status = '✅ Оплачено 50 руб.';
-            _paymentSuccess = true;
+          });
+          _showTemporaryMessage('Оплачено 50 руб.', isSuccess: true);
+          setState(() {
             _isWaiting = false;
           });
         } else {
+          _showTemporaryMessage('Недостаточно средств', isError: true);
           setState(() {
-            _status = '❌ Недостаточно средств';
             _isWaiting = false;
           });
         }
@@ -84,10 +111,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _cancelPayment() {
+    _showTemporaryMessage('Время истекло. Попробуйте снова', isTimeout: true);
     setState(() {
-      _status = '⏰ Время истекло';
       _isWaiting = false;
     });
+  }
+
+  @override
+  void dispose() {
+    _messageTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -103,109 +136,108 @@ class _PaymentScreenState extends State<PaymentScreen> {
         color: Colors.black.withOpacity(0.5),
         child: Scaffold(
           backgroundColor: Colors.transparent,
-          appBar: AppBar(
-            title: const Text(
-              'NFC Кошелек',
-              style: TextStyle(color: Colors.white),
-            ),
-            centerTitle: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-          ),
           body: Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Заголовок
-                      const Text(
-                        'ОПЛАТА ПРОЕЗДА',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2e7d32),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Приложите карту к считывателю',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 24),
-                      
-                      // Информация о последней оплате
-                      if (_cardOwner != null && _paymentSuccess) ...[
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.green[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green[200]!),
+              child: Center(
+                child: SizedBox(
+                  width: 360,  // ← фиксированная ширина, как у карточки входа
+                  child: Card(
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Заголовок
+                          const Text(
+                            'ОПЛАТА ПРОЕЗДА',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2e7d32),
+                            ),
                           ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.check_circle, color: Color(0xFF2e7d32), size: 48),
-                              const SizedBox(height: 8),
-                              Text(
-                                '$_cardOwner',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Приложите карту к считывателю',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Информация об успешной оплате
+                          if (_showSuccess && _cardOwner != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.green[200]!),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Баланс: $_balance руб.',
-                                style: const TextStyle(fontSize: 16),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle, color: Color(0xFF2e7d32), size: 40),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '$_cardOwner',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Баланс: $_balance руб.',
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                          
+                          // Статус
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _isWaiting 
+                                  ? Colors.orange[50] 
+                                  : (_showSuccess ? Colors.green[50] : (_showError || _showTimeout ? Colors.red[50] : Colors.grey[100])),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _isWaiting 
+                                    ? Colors.orange[200]! 
+                                    : (_showSuccess ? Colors.green[200]! : (_showError || _showTimeout ? Colors.red[200]! : Colors.grey[300]!)),
+                              ),
+                            ),
+                            child: Text(
+                              _status,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
+                                color: _isWaiting ? Colors.orange[800] : (_showSuccess ? Colors.green[800] : (_showError || _showTimeout ? Colors.red[800] : Colors.grey[700])),
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      
-                      // Статус
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _isWaiting 
-                              ? Colors.orange[50] 
-                              : (_paymentSuccess ? Colors.green[50] : Colors.grey[100]),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _isWaiting 
-                                ? Colors.orange[200]! 
-                                : (_paymentSuccess ? Colors.green[200]! : Colors.grey[300]!),
+                          
+                          const SizedBox(height: 28),
+                          
+                          // Кнопка оплаты
+                          PaymentButton(
+                            isLoading: _isWaiting,
+                            onPressed: _startPayment,
                           ),
-                        ),
-                        child: Text(
-                          _status,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
-                            color: _isWaiting ? Colors.orange[800] : (_paymentSuccess ? Colors.green[800] : Colors.grey[700]),
-                          ),
-                        ),
+                        ],
                       ),
-                      
-                      const SizedBox(height: 32),
-                      
-                      // Кнопка оплаты
-                      PaymentButton(
-                        isLoading: _isWaiting,
-                        onPressed: _startPayment,
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

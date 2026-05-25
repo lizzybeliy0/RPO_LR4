@@ -3,81 +3,31 @@
     {
       "uid": "ab  87  7e  05",
       "ownerName": "Gilenko Lesha",
-      "balance": 9650,
-      "createdAt": "2026-05-23T19:01:55.217564",
-      "updatedAt": "2026-05-25T12:48:47.222243"
+      "balance": 9900,
+      "createdAt": "2026-05-25T13:22:11.452675",
+      "updatedAt": "2026-05-25T13:23:05.282383"
     }
   ],
   "transactions": [
     {
-      "id": "1779552131394",
+      "id": "1779704575755",
       "cardUid": "ab  87  7e  05",
       "amount": 50,
       "type": "payment",
       "success": true,
       "message": "Оплата проезда",
       "balanceAfter": 9950,
-      "createdAt": "2026-05-23T19:02:11.394111"
+      "createdAt": "2026-05-25T13:22:55.755352"
     },
     {
-      "id": "1779552135616",
+      "id": "1779704585282",
       "cardUid": "ab  87  7e  05",
       "amount": 50,
       "type": "payment",
       "success": true,
       "message": "Оплата проезда",
       "balanceAfter": 9900,
-      "createdAt": "2026-05-23T19:02:15.616993"
-    },
-    {
-      "id": "1779552141192",
-      "cardUid": "ab  87  7e  05",
-      "amount": 50,
-      "type": "payment",
-      "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9850,
-      "createdAt": "2026-05-23T19:02:21.192491"
-    },
-    {
-      "id": "1779701183110",
-      "cardUid": "ab  87  7e  05",
-      "amount": 50,
-      "type": "payment",
-      "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9800,
-      "createdAt": "2026-05-25T12:26:23.110184"
-    },
-    {
-      "id": "1779701420492",
-      "cardUid": "ab  87  7e  05",
-      "amount": 50,
-      "type": "payment",
-      "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9750,
-      "createdAt": "2026-05-25T12:30:20.492053"
-    },
-    {
-      "id": "1779701434858",
-      "cardUid": "ab  87  7e  05",
-      "amount": 50,
-      "type": "payment",
-      "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9700,
-      "createdAt": "2026-05-25T12:30:34.858637"
-    },
-    {
-      "id": "1779702527222",
-      "cardUid": "ab  87  7e  05",
-      "amount": 50,
-      "type": "payment",
-      "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9650,
-      "createdAt": "2026-05-25T12:48:47.222243"
+      "createdAt": "2026-05-25T13:23:05.282383"
     }
   ]
 }
