@@ -8,10 +8,8 @@ INSERT INTO keys (data) VALUES ('key_a1b2c3d4e5f6');
 INSERT INTO keys (data) VALUES ('key_f6e5d4c3b2a1');
 
 -- Insert sample cards
-INSERT INTO cards (number, balance, blocked, owner_name, key_id) VALUES ('1234567890', 10000, 0, 'Belova Elizaveta', 1);
-INSERT INTO cards (number, balance, blocked, owner_name, key_id) VALUES ('0987654321', 10, 0, 'Ivanov Matvey', 1);
-INSERT INTO cards (number, balance, blocked, owner_name, key_id) VALUES ('1231231234', 1000, 0, 'Kamyshova Anastasya', 2);
-INSERT INTO cards (number, balance, blocked, owner_name, key_id) VALUES ('1111222233', 0, 1, 'Blocked User', 2);
+INSERT INTO cards (number, balance, blocked, owner_name, key_id) 
+VALUES ('36 cb 20 06', 100000, 0, 'Belova Elizaveta', 1);
 
 -- Insert sample terminals
 INSERT INTO terminals (serial, address, name) VALUES ('TERM-001', 'Metro Station 1', 'Metro Terminal 1');

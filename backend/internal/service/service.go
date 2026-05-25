@@ -208,3 +208,11 @@ func (s *Service) AuthorizeTransaction(cardNumber string, amount int64, terminal
 func (s *Service) GetKeysForTerminal() ([]models.Key, error) {
 	return s.repo.GetAllKeys()
 }
+
+func (s *Service) GetCardByNumber(number string) (*models.Card, error) {
+	return s.repo.GetCardByNumber(number)
+}
+
+func (s *Service) UpdateBalance(cardID int64, newBalance int64) error {
+	return s.repo.UpdateBalance(cardID, newBalance)
+}

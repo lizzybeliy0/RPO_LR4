@@ -816,3 +816,38 @@ func (h *Handler) DeleteKey(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+func (h *Handler) NotifyPayment(c *gin.Context) {
+	var req struct {
+		CardNumber string `json:"card_number"`
+		Amount     int64  `json:"amount"`
+		TerminalID int64  `json:"terminal_id"`
+		NewBalance int64  `json:"new_balance"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Ищем карту по номеру
+	card, err := h.svc.GetCardByNumber(req.CardNumber)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "card not found"})
+		return
+	}
+
+	// Сохраняем транзакцию
+	tx := &models.Transaction{
+		Amount:     req.Amount,
+		CardID:     card.ID,
+		TerminalID: req.TerminalID,
+		CreatedAt:  time.Now(),
+	}
+	h.svc.CreateTransaction(tx)
+
+	// Обновляем баланс (только для отображения)
+	h.svc.UpdateBalance(card.ID, req.NewBalance)
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}

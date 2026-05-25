@@ -1,40 +1,49 @@
 {
   "cards": [
     {
-      "uid": "ab  87  7e  05",
-      "ownerName": "Gilenko Lesha",
-      "balance": 9900,
-      "createdAt": "2026-05-25T13:22:11.452675",
-      "updatedAt": "2026-05-25T13:23:05.282383"
-    },
-    {
       "uid": "36  cb  20  06",
       "ownerName": "Belova Elizaveta",
-      "balance": 100000,
-      "createdAt": "2026-05-25T14:16:04.882199",
-      "updatedAt": "2026-05-25T14:16:04.882199"
+      "balance": 99800,
+      "status": "active",
+      "keyId": 1
     }
   ],
   "transactions": [
     {
-      "id": "1779704575755",
-      "cardUid": "ab  87  7e  05",
+      "id": "1779713686543",
+      "cardUid": "36  cb  20  06",
       "amount": 50,
       "type": "payment",
       "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9950,
-      "createdAt": "2026-05-25T13:22:55.755352"
+      "balanceAfter": 99950,
+      "createdAt": "2026-05-25T15:54:46.543866"
     },
     {
-      "id": "1779704585282",
-      "cardUid": "ab  87  7e  05",
+      "id": "1779713693039",
+      "cardUid": "36  cb  20  06",
       "amount": 50,
       "type": "payment",
       "success": true,
-      "message": "Оплата проезда",
-      "balanceAfter": 9900,
-      "createdAt": "2026-05-25T13:23:05.282383"
+      "balanceAfter": 99900,
+      "createdAt": "2026-05-25T15:54:53.039884"
+    },
+    {
+      "id": "1779713697214",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99850,
+      "createdAt": "2026-05-25T15:54:57.214938"
+    },
+    {
+      "id": "1779713702060",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99800,
+      "createdAt": "2026-05-25T15:55:02.060550"
     }
   ]
 }

@@ -85,7 +85,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           return;
         }
         
-        final success = await widget.paymentService.pay(uid, 50);
+        final success = await widget.paymentService.pay(uid, 50, 1);  // terminalId = 1
         
         if (success) {
           final updatedCard = widget.paymentService.getCard(uid);

@@ -39,19 +39,19 @@ type Card struct {
 }
 
 type CreateCardRequest struct {
-	Number    string `json:"number" binding:"required,len=10" example:"1234567890" description:"Card number (exactly 10 digits)"`
-	Balance   int64  `json:"balance" binding:"required,min=0" example:"500" description:"Initial balance in cents"`
+	Number    string `json:"number" binding:"required" example:"ab 87 7e 05" description:"Card number (UID from NFC)"`
+	Balance   int64  `json:"balance" binding:"required,min=0" example:"10000" description:"Initial balance in cents"`
 	Blocked   bool   `json:"blocked" example:"false" description:"Initial blocked status"`
-	OwnerName string `json:"owner_name" binding:"required" example:"Ivan Ivanov" description:"Card owner full name"`
+	OwnerName string `json:"owner_name" binding:"required" example:"Gilenko Lesha" description:"Card owner full name"`
 	KeyID     int64  `json:"key_id" binding:"required" example:"1" description:"Associated cryptographic key ID"`
 }
 
 type UpdateCardRequest struct {
-	Number    string `json:"number" binding:"required,len=10" example:"1234567890" description:"Card number (exactly 10 digits)"`
-	Balance   int64  `json:"balance" binding:"required,min=0" example:"750" description:"Updated balance in cents"`
+	Number    string `json:"number" binding:"required" example:"ab 87 7e 05" description:"Card number (UID from NFC)"`
+	Balance   int64  `json:"balance" binding:"required,min=0" example:"9900" description:"Updated balance in cents"`
 	Blocked   bool   `json:"blocked" example:"true" description:"Updated blocked status"`
-	OwnerName string `json:"owner_name" binding:"required" example:"Petr Petrov" description:"Updated owner full name"`
-	KeyID     int64  `json:"key_id" binding:"required" example:"2" description:"Associated cryptographic key ID"`
+	OwnerName string `json:"owner_name" binding:"required" example:"Gilenko Lesha" description:"Updated owner full name"`
+	KeyID     int64  `json:"key_id" binding:"required" example:"1" description:"Associated cryptographic key ID"`
 }
 
 type Terminal struct {

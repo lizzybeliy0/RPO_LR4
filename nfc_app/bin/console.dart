@@ -59,7 +59,8 @@ NFC Кошелек
         print('❌ Карта не найдена');
         return;
       }
-      final success = await payment.pay(uid, 50);
+      // terminalId = 1 (по умолчанию)
+      final success = await payment.pay(uid, 50, 1);
       if (success) {
         final card = payment.getCard(uid);
         print('✅ Оплачено 50 руб. Баланс: ${card?.balance ?? 0} руб.');
@@ -86,6 +87,7 @@ NFC Кошелек
 Владелец: ${card.ownerName}
 Баланс: ${card.balance} руб.
 UID: ${card.uid}
+Статус: ${card.status}
 ''');
       }
       break;

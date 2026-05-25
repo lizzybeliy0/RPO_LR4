@@ -2,31 +2,31 @@ class CardRecord {
   final String uid;
   final String ownerName;
   int balance;
-  final String createdAt;
-  String updatedAt;
+  final String status;      // 'active' или 'blocked'
+  final int keyId;
 
   CardRecord({
     required this.uid,
     required this.ownerName,
     required this.balance,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.status,
+    required this.keyId,
   });
 
   Map<String, dynamic> toJson() => {
     'uid': uid,
     'ownerName': ownerName,
     'balance': balance,
-    'createdAt': createdAt,
-    'updatedAt': updatedAt,
+    'status': status,
+    'keyId': keyId,
   };
 
   factory CardRecord.fromJson(Map<String, dynamic> json) => CardRecord(
     uid: json['uid'],
     ownerName: json['ownerName'],
     balance: json['balance'],
-    createdAt: json['createdAt'],
-    updatedAt: json['updatedAt'],
+    status: json['status'] ?? 'active',
+    keyId: json['keyId'] ?? 1,
   );
 }
 
@@ -34,11 +34,10 @@ class TransactionRecord {
   final String id;
   final String cardUid;
   final int amount;
-  final String type;
+  final String type;        // 'payment' или 'replenishment'
   final bool success;
-  final String message;
   final int balanceAfter;
-  final String createdAt;
+  final DateTime createdAt;
 
   TransactionRecord({
     required this.id,
@@ -46,7 +45,6 @@ class TransactionRecord {
     required this.amount,
     required this.type,
     required this.success,
-    required this.message,
     required this.balanceAfter,
     required this.createdAt,
   });
@@ -57,9 +55,8 @@ class TransactionRecord {
     'amount': amount,
     'type': type,
     'success': success,
-    'message': message,
     'balanceAfter': balanceAfter,
-    'createdAt': createdAt,
+    'createdAt': createdAt.toIso8601String(),
   };
 
   factory TransactionRecord.fromJson(Map<String, dynamic> json) => TransactionRecord(
@@ -68,9 +65,8 @@ class TransactionRecord {
     amount: json['amount'],
     type: json['type'],
     success: json['success'],
-    message: json['message'],
     balanceAfter: json['balanceAfter'],
-    createdAt: json['createdAt'],
+    createdAt: DateTime.parse(json['createdAt']),
   );
 }
 
