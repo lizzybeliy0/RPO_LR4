@@ -1,0 +1,108 @@
+.cards-container,
+.transactions-container,
+.terminals-container,
+.users-container,
+.keys-container {
+    width: 100%;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.search-input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 200px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.loading, .error, .info {
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+}
+
+.error {
+    color: #c62828;
+}
+
+.info {
+    color: #666;
+}
+
+.my-card {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.card-details {
+    background: #f5f5f5;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card-details h2 {
+    margin-bottom: 1.5rem;
+    color: #2e7d32;
+}
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+}
+
+.info-row .label {
+    font-weight: bold;
+    color: #666;
+}
+
+.info-row .value {
+    color: #333;
+}
+
+.info-row .value.balance {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2e7d32;
+}
+
+.info-row .value.balance.low {
+    color: #ff9800;
+}
+
+.info-row .value.status.active {
+    color: #2e7d32;
+}
+
+.info-row .value.status.blocked {
+    color: #c62828;
+}

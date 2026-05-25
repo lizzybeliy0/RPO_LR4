@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  transport-api:
+    build: .
+    container_name: transport-cards-api
+    ports:
+      - "8888:8888"
+    volumes:
+      - transport-data:/app
+    environment:
+      - DB_PATH=/app/transport.db
+      - PORT=8080
+    restart: unless-stopped
+
+volumes:
+  transport-data:

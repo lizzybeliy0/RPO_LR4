@@ -1,0 +1,66 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+server.exe
+transport-api
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# SSL certificates
+ssl/
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Build artifacts
+dist/
+build/
+bin/
+
+# Docker
+docker-compose.override.yml
+
+# Swagger docs (если генерируются автоматически)
+docs/docs.go
+docs/swagger.json
+docs/swagger.yaml

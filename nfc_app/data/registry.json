@@ -6,6 +6,13 @@
       "balance": 9900,
       "createdAt": "2026-05-25T13:22:11.452675",
       "updatedAt": "2026-05-25T13:23:05.282383"
+    },
+    {
+      "uid": "36  cb  20  06",
+      "ownerName": "Belova Elizaveta",
+      "balance": 100000,
+      "createdAt": "2026-05-25T14:16:04.882199",
+      "updatedAt": "2026-05-25T14:16:04.882199"
     }
   ],
   "transactions": [
