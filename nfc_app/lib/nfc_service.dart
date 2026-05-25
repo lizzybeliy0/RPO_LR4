@@ -2,25 +2,60 @@ import 'dart:io';
 
 class NfcService {
   final String nfcListPath = r'C:\Users\Lizaveta\MGTU_Study\rpo2\lab4\libs\libnfc\build\utils\nfc-list.exe';
+  String? _cachedComPort;
+
+  Future<String?> _findComPort() async {
+    final result = await Process.run('powershell', [
+      '-Command',
+      '[System.IO.Ports.SerialPort]::getportnames()'
+    ]);
+    
+    final ports = (result.stdout as String)
+        .trim()
+        .split('\r\n')
+        .where((p) => p.trim().isNotEmpty)
+        .toList();
+    
+    for (final port in ports) {
+      final testResult = await Process.run(
+        nfcListPath,
+        ['-v'],
+        environment: {'LIBNFC_DEVICE': 'pn532_uart:$port'},
+        runInShell: true,
+      );
+      
+      if (testResult.exitCode == 0 && (testResult.stdout as String).contains('NFC device:')) {
+        print('✅ Device found on $port');
+        return port;
+      }
+    }
+    return null;
+  }
 
   Future<String?> readCardUid({int maxAttempts = 30}) async {
+    _cachedComPort ??= await _findComPort();
+    if (_cachedComPort == null) {
+      print('❌ NFC device not found');
+      return null;
+    }
+    
     for (int i = 0; i < maxAttempts; i++) {
       try {
         final result = await Process.run(
           nfcListPath,
           ['-v'],
+          environment: {'LIBNFC_DEVICE': 'pn532_uart:$_cachedComPort'},
+          runInShell: true,
         );
         
         if (result.exitCode == 0) {
           final output = result.stdout as String;
           final uid = _parseUid(output);
           if (uid != null) {
-            print('Card detected! UID: $uid');
             return uid;
           }
         }
         
-        // Ждём 1 секунду перед следующим сканированием
         await Future.delayed(Duration(seconds: 1));
         print('Waiting for card... (${i + 1}/$maxAttempts)');
         
