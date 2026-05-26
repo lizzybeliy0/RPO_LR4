@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'models.dart';
@@ -8,15 +9,14 @@ class PaymentService {
   late WalletData _data;
   late ApiService _api;
   String? _token;
+  Timer? _syncTimer;
 
   Future<void> load() async {
-    // Инициализируем API сервис
     _api = ApiService(
       baseUrl: 'https://localhost:8888/api/v1',
       allowInsecureLocalhost: true,
     );
     
-    // Пробуем получить токен (если есть сохранённый)
     await _loadToken();
     
     await storageFile.parent.create(recursive: true);
@@ -37,8 +37,25 @@ class PaymentService {
       _data = WalletData(cards: [], transactions: []);
     }
     
+    // Первоначальная синхронизация
     await _syncCardsFromBackend();
     await _save();
+    
+    // Запускаем периодическую синхронизацию каждые 10 секунд
+    _startPeriodicSync();
+  }
+
+  void _startPeriodicSync() {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+      print('🔄 Periodic sync checking for new cards...');
+      await _syncCardsFromBackend();
+      await _save();
+    });
+  }
+
+  void dispose() {
+    _syncTimer?.cancel();
   }
 
   Future<void> _loadToken() async {
@@ -46,7 +63,6 @@ class PaymentService {
     if (await tokenFile.exists()) {
       _token = await tokenFile.readAsString();
     } else {
-      // Если нет токена, логинимся как пользователь
       _token = await _api.login('user', 'password123');
       if (_token != null) {
         await tokenFile.writeAsString(_token!);
@@ -54,10 +70,17 @@ class PaymentService {
     }
   }
 
+  // Публичный метод для синхронизации (можно вызывать из UI)
+  Future<void> syncCards() async {
+    await _syncCardsFromBackend();
+    await _save();
+  }
+
   Future<void> _syncCardsFromBackend() async {
     if (_token == null) return;
     
     final backendCards = await _api.getCards(token: _token!);
+    bool changed = false;
     
     for (final backendCard in backendCards) {
       final uid = backendCard['number'];
@@ -69,14 +92,20 @@ class PaymentService {
           status: backendCard['blocked'] ? 'blocked' : 'active',
           keyId: backendCard['key_id'],
         ));
-        print('🆕 New card from backend: $uid');
+        print('🆕 NEW CARD ADDED FROM BACKEND: $uid (${backendCard['owner_name']})');
+        changed = true;
       }
+    }
+    
+    if (changed) {
+      print('✅ Sync completed, new cards added to JSON');
     }
   }
 
   Future<void> _save() async {
     final encoder = const JsonEncoder.withIndent('  ');
     await storageFile.writeAsString(encoder.convert(_data.toJson()));
+    print('💾 JSON saved');
   }
 
   CardRecord? getCard(String uid) => _data.cardByUid(uid);
@@ -96,8 +125,16 @@ class PaymentService {
   }
 
   Future<bool> pay(String uid, int amount, int terminalId) async {
+    // Принудительная синхронизация перед оплатой
+    await _syncCardsFromBackend();
+    await _save();
+    
     final card = _data.cardByUid(uid);
-    if (card == null) return false;
+    if (card == null) {
+      print('❌ Card not found after sync: $uid');
+      return false;
+    }
+    
     if (card.balance < amount) return false;
     if (card.status != 'active') return false;
 
