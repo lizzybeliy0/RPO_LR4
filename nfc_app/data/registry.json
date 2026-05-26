@@ -3,63 +3,56 @@
     {
       "uid": "36  cb  20  06",
       "ownerName": "Belova Elizaveta",
-      "balance": 98950,
-      "status": "active",
-      "keyId": 1
-    },
-    {
-      "uid": "ab  87  7e  05",
-      "ownerName": "F F",
-      "balance": 9900,
+      "balance": 99900,
       "status": "active",
       "keyId": 1
     }
   ],
   "transactions": [
     {
-      "id": "1779801117415",
+      "id": "1779802512256",
       "cardUid": "36  cb  20  06",
       "amount": 50,
       "type": "payment",
       "success": true,
-      "balanceAfter": 99050,
-      "createdAt": "2026-05-26T16:11:57.415690"
+      "balanceAfter": 99950,
+      "createdAt": "2026-05-26T16:35:12.256890"
     },
     {
-      "id": "1779801131772",
+      "id": "1779802549140",
       "cardUid": "36  cb  20  06",
       "amount": 50,
       "type": "payment",
       "success": true,
-      "balanceAfter": 99000,
-      "createdAt": "2026-05-26T16:12:11.772975"
+      "balanceAfter": 99900,
+      "createdAt": "2026-05-26T16:35:49.140358"
     },
     {
-      "id": "1779801552990",
-      "cardUid": "36  cb  20  06",
-      "amount": 50,
-      "type": "payment",
-      "success": true,
-      "balanceAfter": 98950,
-      "createdAt": "2026-05-26T16:19:12.990451"
-    },
-    {
-      "id": "1779801600360",
+      "id": "1779802588718",
       "cardUid": "ab  87  7e  05",
       "amount": 50,
       "type": "payment",
       "success": true,
       "balanceAfter": 9950,
-      "createdAt": "2026-05-26T16:20:00.360951"
+      "createdAt": "2026-05-26T16:36:28.718720"
     },
     {
-      "id": "1779801637007",
+      "id": "1779802597249",
       "cardUid": "ab  87  7e  05",
       "amount": 50,
       "type": "payment",
       "success": true,
       "balanceAfter": 9900,
-      "createdAt": "2026-05-26T16:20:37.007360"
+      "createdAt": "2026-05-26T16:36:37.249928"
+    },
+    {
+      "id": "1779802615145",
+      "cardUid": "ab  87  7e  05",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 9850,
+      "createdAt": "2026-05-26T16:36:55.145274"
     }
   ]
 }

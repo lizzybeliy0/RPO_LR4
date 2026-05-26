@@ -49,18 +49,23 @@ class ApiService {
   // Получить список карт (требует токен)
   Future<List<Map<String, dynamic>>> getCards({required String token}) async {
     try {
-      final response = await _request(
-        'GET',
-        '/cards',
-        token: token,
-      );
-      if (response is List) {
-        return response.cast<Map<String, dynamic>>();
+      final client = HttpClient()
+        ..badCertificateCallback = (cert, host, port) => true;
+      
+      final request = await client.getUrl(Uri.parse('$baseUrl/cards'));
+      request.headers.set('Authorization', 'Bearer $token');
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(await response.transform(utf8.decoder).join()) as List;
+        return data.cast<Map<String, dynamic>>();
+      } else if (response.statusCode == 401) {
+        throw Exception('invalid_token');
       }
       return [];
     } catch (e) {
       print('Get cards error: $e');
-      return [];
+      rethrow;
     }
   }
 

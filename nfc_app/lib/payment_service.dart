@@ -63,10 +63,19 @@ class PaymentService {
     if (await tokenFile.exists()) {
       _token = await tokenFile.readAsString();
     } else {
-      _token = await _api.login('user', 'password123');
-      if (_token != null) {
-        await tokenFile.writeAsString(_token!);
-      }
+      await _refreshToken();
+    }
+  }
+
+  Future<void> _refreshToken() async {
+    print('🔄 Refreshing token...');
+    _token = await _api.login('user', 'password123');
+    if (_token != null) {
+      final tokenFile = File('data/token.txt');
+      await tokenFile.writeAsString(_token!);
+      print('✅ Token refreshed');
+    } else {
+      print('❌ Failed to refresh token');
     }
   }
 
@@ -77,11 +86,29 @@ class PaymentService {
   }
 
   Future<void> _syncCardsFromBackend() async {
-    if (_token == null) return;
+    if (_token == null) {
+      await _refreshToken();
+      if (_token == null) return;
+    }
     
-    final backendCards = await _api.getCards(token: _token!);
-    bool changed = false;
+    List<Map<String, dynamic>>? backendCards;
+    try {
+      backendCards = await _api.getCards(token: _token!);
+    } catch (e) {
+      // Если токен протух, пробуем обновить
+      print('⚠️ Token error, refreshing...');
+      await _refreshToken();
+      if (_token != null) {
+        backendCards = await _api.getCards(token: _token!);
+      }
+    }
     
+    if (backendCards == null) return;
+    
+    final backendUids = backendCards.map((card) => card['number'] as String).toSet();
+    final localUids = _data.cards.map((card) => card.uid).toSet();
+    
+    // Добавляем новые карты
     for (final backendCard in backendCards) {
       final uid = backendCard['number'];
       if (_data.cardByUid(uid) == null) {
@@ -93,19 +120,34 @@ class PaymentService {
           keyId: backendCard['key_id'],
         ));
         print('🆕 NEW CARD ADDED FROM BACKEND: $uid (${backendCard['owner_name']})');
-        changed = true;
+      } else {
+        // Обновляем статус карты (активна/заблокирована)
+        final existingCard = _data.cardByUid(uid);
+        if (existingCard != null) {
+          final newStatus = backendCard['blocked'] ? 'blocked' : 'active';
+          if (existingCard.status != newStatus) {
+            existingCard.status = newStatus;
+            print('🔄 Card status updated: $uid -> $newStatus');
+          }
+        }
       }
     }
     
-    if (changed) {
-      print('✅ Sync completed, new cards added to JSON');
+    // Удаляем карты, которых нет в бэкенде
+    final toRemove = localUids.difference(backendUids);
+    for (final uid in toRemove) {
+      _data.cards.removeWhere((card) => card.uid == uid);
+      print('🗑️ CARD REMOVED FROM JSON: $uid');
+    }
+    
+    if (toRemove.isNotEmpty) {
+      print('✅ Sync completed, ${toRemove.length} cards removed');
     }
   }
 
   Future<void> _save() async {
     final encoder = const JsonEncoder.withIndent('  ');
     await storageFile.writeAsString(encoder.convert(_data.toJson()));
-    print('💾 JSON saved');
   }
 
   CardRecord? getCard(String uid) => _data.cardByUid(uid);

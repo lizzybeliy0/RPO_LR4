@@ -2,7 +2,7 @@ class CardRecord {
   final String uid;
   final String ownerName;
   int balance;
-  final String status;      // 'active' или 'blocked'
+  String status;
   final int keyId;
 
   CardRecord({
@@ -34,7 +34,7 @@ class TransactionRecord {
   final String id;
   final String cardUid;
   final int amount;
-  final String type;        // 'payment' или 'replenishment'
+  final String type;
   final bool success;
   final int balanceAfter;
   final DateTime createdAt;
