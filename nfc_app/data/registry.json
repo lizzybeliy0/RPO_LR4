@@ -3,7 +3,14 @@
     {
       "uid": "36  cb  20  06",
       "ownerName": "Belova Elizaveta",
-      "balance": 99900,
+      "balance": 101300,
+      "status": "active",
+      "keyId": 1
+    },
+    {
+      "uid": "ab  87  7e  05",
+      "ownerName": "G G",
+      "balance": 1050,
       "status": "active",
       "keyId": 1
     }
@@ -53,6 +60,78 @@
       "success": true,
       "balanceAfter": 9850,
       "createdAt": "2026-05-26T16:36:55.145274"
+    },
+    {
+      "id": "1779803153508",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 99850,
+      "createdAt": "2026-05-26T16:45:53.508976"
+    },
+    {
+      "id": "1779803160012",
+      "cardUid": "36  cb  20  06",
+      "amount": 500,
+      "type": "replenishment",
+      "success": true,
+      "balanceAfter": 100350,
+      "createdAt": "2026-05-26T16:46:00.012057"
+    },
+    {
+      "id": "1779803162993",
+      "cardUid": "36  cb  20  06",
+      "amount": 500,
+      "type": "replenishment",
+      "success": true,
+      "balanceAfter": 100850,
+      "createdAt": "2026-05-26T16:46:02.993581"
+    },
+    {
+      "id": "1779803167148",
+      "cardUid": "36  cb  20  06",
+      "amount": 500,
+      "type": "replenishment",
+      "success": true,
+      "balanceAfter": 101350,
+      "createdAt": "2026-05-26T16:46:07.148279"
+    },
+    {
+      "id": "1779803190198",
+      "cardUid": "36  cb  20  06",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 101300,
+      "createdAt": "2026-05-26T16:46:30.198037"
+    },
+    {
+      "id": "1779803247448",
+      "cardUid": "ab  87  7e  05",
+      "amount": 50,
+      "type": "payment",
+      "success": true,
+      "balanceAfter": 50,
+      "createdAt": "2026-05-26T16:47:27.448833"
+    },
+    {
+      "id": "1779803266002",
+      "cardUid": "ab  87  7e  05",
+      "amount": 500,
+      "type": "replenishment",
+      "success": true,
+      "balanceAfter": 550,
+      "createdAt": "2026-05-26T16:47:46.002442"
+    },
+    {
+      "id": "1779803271159",
+      "cardUid": "ab  87  7e  05",
+      "amount": 500,
+      "type": "replenishment",
+      "success": true,
+      "balanceAfter": 1050,
+      "createdAt": "2026-05-26T16:47:51.159503"
     }
   ]
 }

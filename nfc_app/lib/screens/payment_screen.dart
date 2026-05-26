@@ -48,11 +48,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _startPayment() async {
     if (_isWaiting) return;
+    await _processTransaction(50, 'оплаты');
+  }
 
+  Future<void> _startReplenish() async {
+    if (_isWaiting) return;
+    await _processTransaction(500, 'пополнения');
+  }
+
+  Future<void> _processTransaction(int amount, String actionName) async {
     setState(() {
       _isWaiting = true;
       _remainingSeconds = 30;
-      _status = 'Приложите карту...';
+      _status = 'Приложите карту для $actionName...';
       _showSuccess = false;
       _showError = false;
       _showTimeout = false;
@@ -62,7 +70,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     timer = Timer.periodic(const Duration(seconds: 1), (t) {
       setState(() {
         _remainingSeconds--;
-        _status = 'Приложите карту... (${_remainingSeconds}с)';
+        _status = 'Приложите карту для $actionName... (${_remainingSeconds}с)';
       });
       if (_remainingSeconds <= 0) {
         t.cancel();
@@ -79,13 +87,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
         
         if (card == null) {
           _showTemporaryMessage('Карта не зарегистрирована', isError: true);
-          setState(() {
-            _isWaiting = false;
-          });
+          setState(() { _isWaiting = false; });
           return;
         }
         
-        final success = await widget.paymentService.pay(uid, 50, 1);  // terminalId = 1
+        bool success;
+        if (amount == 50) {
+          success = await widget.paymentService.pay(uid, amount, 1);
+        } else {
+          success = await widget.paymentService.replenish(uid, amount, 1);
+        }
         
         if (success) {
           final updatedCard = widget.paymentService.getCard(uid);
@@ -93,15 +104,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
             _cardOwner = updatedCard?.ownerName;
             _balance = updatedCard?.balance;
           });
-          _showTemporaryMessage('Оплачено 50 руб.', isSuccess: true);
-          setState(() {
-            _isWaiting = false;
-          });
+          _showTemporaryMessage(amount == 50 ? 'Оплачено $amount руб.' : 'Пополнено $amount руб.', isSuccess: true);
+          setState(() { _isWaiting = false; });
         } else {
-          _showTemporaryMessage('Недостаточно средств', isError: true);
-          setState(() {
-            _isWaiting = false;
-          });
+          _showTemporaryMessage(amount == 50 ? 'Недостаточно средств' : 'Ошибка пополнения', isError: true);
+          setState(() { _isWaiting = false; });
         }
         return;
       }
@@ -141,7 +148,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Center(
                 child: SizedBox(
-                  width: 360,  // ← фиксированная ширина, как у карточки входа
+                  width: 360,
                   child: Card(
                     elevation: 8,
                     shape: RoundedRectangleBorder(
@@ -152,7 +159,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Заголовок
                           const Text(
                             'ОПЛАТА ПРОЕЗДА',
                             style: TextStyle(
@@ -169,7 +175,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                           const SizedBox(height: 24),
                           
-                          // Информация об успешной оплате
                           if (_showSuccess && _cardOwner != null) ...[
                             Container(
                               padding: const EdgeInsets.all(16),
@@ -202,7 +207,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const SizedBox(height: 20),
                           ],
                           
-                          // Статус
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -230,10 +234,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           
                           const SizedBox(height: 28),
                           
-                          // Кнопка оплаты
                           PaymentButton(
                             isLoading: _isWaiting,
-                            onPressed: _startPayment,
+                            onPayPressed: _startPayment,
+                            onReplenishPressed: _startReplenish,
                           ),
                         ],
                       ),

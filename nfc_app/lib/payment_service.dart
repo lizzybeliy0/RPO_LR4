@@ -210,5 +210,48 @@ class PaymentService {
     return true;
   }
 
+  Future<bool> replenish(String uid, int amount, int terminalId) async {
+    // Принудительная синхронизация перед пополнением
+    await _syncCardsFromBackend();
+    await _save();
+    
+    final card = _data.cardByUid(uid);
+    if (card == null) {
+      print('❌ Card not found after sync: $uid');
+      return false;
+    }
+    
+    if (card.status != 'active') return false;
+
+    // Пополняем в JSON
+    card.balance += amount;
+    
+    // Записываем транзакцию
+    _data.transactions.add(TransactionRecord(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      cardUid: uid,
+      amount: amount,
+      type: 'replenishment',
+      success: true,
+      balanceAfter: card.balance,
+      createdAt: DateTime.now(),
+    ));
+    await _save();
+    
+    // Уведомляем бэкенд
+    final success = await _api.notifyPayment(
+      cardNumber: uid,
+      amount: amount,
+      terminalId: terminalId,
+      newBalance: card.balance,
+    );
+    
+    if (!success) {
+      print('⚠️ Warning: Failed to notify backend');
+    }
+    
+    return true;
+  }
+
   List<CardRecord> getCards() => _data.cards;
 }
