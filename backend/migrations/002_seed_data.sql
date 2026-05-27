@@ -6,10 +6,11 @@ INSERT INTO users (login, password, is_admin, card_id) VALUES ('user', 'password
 -- Insert sample keys
 INSERT INTO keys (data) VALUES ('key_a1b2c3d4e5f6');
 INSERT INTO keys (data) VALUES ('key_f6e5d4c3b2a1');
+INSERT INTO keys (data) VALUES ('key_f6e5d4c3b2a2');
 
 -- Insert sample cards
 INSERT INTO cards (number, balance, blocked, owner_name, key_id) 
-VALUES ('36  cb  20  06', 100000, 0, 'Belova Elizaveta', 1);
+VALUES ('1d  fc  7d  05', 100000, 0, 'Belova Elizaveta', 1);
 
 -- Insert sample terminals
 INSERT INTO terminals (serial, address, name) VALUES ('TERM-001', 'Metro Station 1', 'Metro Terminal 1');

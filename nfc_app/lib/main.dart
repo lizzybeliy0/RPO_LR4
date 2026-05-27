@@ -5,7 +5,7 @@ import 'screens/payment_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final paymentService = PaymentService();
-  await paymentService.load();
+  // load() больше не нужен, данные читаются напрямую с карты
   runApp(MyApp(paymentService: paymentService));
 }
 

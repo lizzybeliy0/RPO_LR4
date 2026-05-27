@@ -1,8 +1,8 @@
+// screens/payment_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../nfc_service.dart';
 import '../payment_service.dart';
-import '../models.dart';
 import '../widgets/payment_button.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final NfcService _nfc = NfcService();
   bool _isWaiting = false;
-  int _remainingSeconds = 30;
+  int _remainingSeconds = 15; // 15 секунд на операцию
   String _status = 'Готов к оплате';
   String? _cardOwner;
   int? _balance;
@@ -24,6 +24,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _showError = false;
   bool _showTimeout = false;
   Timer? _messageTimer;
+  Timer? _countdownTimer;
 
   void _showTemporaryMessage(String message, {bool isSuccess = false, bool isError = false, bool isTimeout = false}) {
     setState(() {
@@ -34,99 +35,113 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
     
     _messageTimer?.cancel();
-    _messageTimer = Timer(const Duration(seconds: 5), () {
-      setState(() {
-        _showSuccess = false;
-        _showError = false;
-        _showTimeout = false;
-        _status = 'Готов к оплате';
-        _cardOwner = null;
-        _balance = null;
-      });
+    _messageTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showSuccess = false;
+          _showError = false;
+          _showTimeout = false;
+          _status = 'Готов к оплате';
+          _cardOwner = null;
+          _balance = null;
+        });
+      }
     });
   }
 
   Future<void> _startPayment() async {
     if (_isWaiting) return;
-    await _processTransaction(50, 'оплаты');
+    await _processTransaction(() => widget.paymentService.pay(), 50, 'оплаты');
   }
 
   Future<void> _startReplenish() async {
     if (_isWaiting) return;
-    await _processTransaction(500, 'пополнения');
+    await _processTransaction(() => widget.paymentService.replenish(), 500, 'пополнения');
   }
 
-  Future<void> _processTransaction(int amount, String actionName) async {
+  Future<void> _startSync() async {
+    if (_isWaiting) return;
+    await _processTransaction(() => widget.paymentService.syncWithBackend(), 0, 'синхронизации');
+  }
+
+  Future<void> _processTransaction(Future<bool> Function() transaction, int amount, String actionName) async {
+    if (!mounted) return;
+    
     setState(() {
       _isWaiting = true;
-      _remainingSeconds = 30;
+      _remainingSeconds = 15;
       _status = 'Приложите карту для $actionName...';
       _showSuccess = false;
       _showError = false;
       _showTimeout = false;
     });
 
-    Timer? timer;
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    // Таймер обратного отсчета
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       setState(() {
         _remainingSeconds--;
         _status = 'Приложите карту для $actionName... (${_remainingSeconds}с)';
       });
       if (_remainingSeconds <= 0) {
         t.cancel();
-        _cancelPayment();
+        _cancelOperation();
       }
     });
 
-    for (int i = 0; i < 30 && _remainingSeconds > 0; i++) {
-      final uid = await _nfc.readCardUid();
-      
-      if (uid != null) {
-        timer?.cancel();
-        final card = widget.paymentService.getCard(uid);
-        
-        if (card == null) {
-          _showTemporaryMessage('Карта не зарегистрирована', isError: true);
-          setState(() { _isWaiting = false; });
-          return;
-        }
-        
-        bool success;
-        if (amount == 50) {
-          success = await widget.paymentService.pay(uid, amount, 1);
-        } else {
-          success = await widget.paymentService.replenish(uid, amount, 1);
-        }
-        
-        if (success) {
-          final updatedCard = widget.paymentService.getCard(uid);
-          setState(() {
-            _cardOwner = updatedCard?.ownerName;
-            _balance = updatedCard?.balance;
-          });
-          _showTemporaryMessage(amount == 50 ? 'Оплачено $amount руб.' : 'Пополнено $amount руб.', isSuccess: true);
-          setState(() { _isWaiting = false; });
-        } else {
-          _showTemporaryMessage(amount == 50 ? 'Недостаточно средств' : 'Ошибка пополнения', isError: true);
-          setState(() { _isWaiting = false; });
-        }
-        return;
-      }
-      
+    // Пытаемся выполнить операцию в течение 15 секунд
+    bool success = false;
+    for (int i = 0; i < 15 && _remainingSeconds > 0; i++) {
+      success = await transaction();
+      if (success) break;
       await Future.delayed(const Duration(seconds: 1));
+    }
+    
+    _countdownTimer?.cancel();
+    
+    if (!mounted) return;
+    
+    if (success) {
+      final info = await widget.paymentService.getCardInfo();
+      if (mounted) {
+        setState(() {
+          _cardOwner = info.$2;
+          _balance = info.$3;
+        });
+        
+        String message;
+        if (actionName == 'синхронизации') {
+          message = 'Синхронизация выполнена! Баланс: ${info.$3} руб.';
+        } else {
+          message = amount == 50 ? 'Оплачено $amount руб.' : 'Пополнено $amount руб.';
+        }
+        
+        _showTemporaryMessage(message, isSuccess: true);
+        setState(() { _isWaiting = false; });
+      }
+    } else {
+      _showTemporaryMessage('Операция не удалась. Попробуйте снова', isError: true);
+      setState(() { _isWaiting = false; });
     }
   }
 
-  void _cancelPayment() {
-    _showTemporaryMessage('Время истекло. Попробуйте снова', isTimeout: true);
-    setState(() {
-      _isWaiting = false;
-    });
+  void _cancelOperation() {
+    if (mounted) {
+      _showTemporaryMessage('Время истекло. Попробуйте снова', isTimeout: true);
+      setState(() {
+        _isWaiting = false;
+      });
+    }
   }
 
   @override
   void dispose() {
     _messageTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -234,10 +249,39 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           
                           const SizedBox(height: 28),
                           
-                          PaymentButton(
-                            isLoading: _isWaiting,
-                            onPayPressed: _startPayment,
-                            onReplenishPressed: _startReplenish,
+                          // Три кнопки: Оплата, Пополнение, Синхронизация
+                          Column(
+                            children: [
+                              PaymentButton(
+                                isLoading: _isWaiting,
+                                onPayPressed: _startPayment,
+                                onReplenishPressed: _startReplenish,
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isWaiting ? null : _startSync,
+                                  icon: const Icon(Icons.sync, color: Colors.white),
+                                  label: const Text(
+                                    'СИНХРОНИЗИРОВАТЬ',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF9C27B0),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    disabledBackgroundColor: Colors.grey[400],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

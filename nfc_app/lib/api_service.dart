@@ -1,3 +1,4 @@
+// lib/api_service.dart - ПРОСТАЯ ВЕРСИЯ, БЕЗ ТОКЕНОВ
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,7 +22,22 @@ class ApiService {
     this.allowInsecureLocalhost = true,
   });
 
-  // Уведомление об оплате (не требует токена)
+  // Получить баланс карты по номеру (UID) - НЕ ТРЕБУЕТ ТОКЕНА!
+  Future<int?> getCardBalance(String cardNumber) async {
+    try {
+      final response = await _request('GET', '/api/v1/cards/number/$cardNumber');
+      
+      if (response is Map<String, dynamic>) {
+        return response['balance'] as int?;
+      }
+      return null;
+    } catch (e) {
+      print('Get card balance error: $e');
+      return null;
+    }
+  }
+
+  // Уведомление об оплате - НЕ ТРЕБУЕТ ТОКЕНА!
   Future<bool> notifyPayment({
     required String cardNumber,
     required int amount,
@@ -31,7 +47,7 @@ class ApiService {
     try {
       final response = await _request(
         'POST',
-        '/payments/notify',
+        '/api/v1/payments/notify',
         body: {
           'card_number': cardNumber,
           'amount': amount,
@@ -46,55 +62,14 @@ class ApiService {
     }
   }
 
-  // Получить список карт (требует токен)
-  Future<List<Map<String, dynamic>>> getCards({required String token}) async {
-    try {
-      final client = HttpClient()
-        ..badCertificateCallback = (cert, host, port) => true;
-      
-      final request = await client.getUrl(Uri.parse('$baseUrl/cards'));
-      request.headers.set('Authorization', 'Bearer $token');
-      final response = await request.close();
-      
-      if (response.statusCode == 200) {
-        final data = jsonDecode(await response.transform(utf8.decoder).join()) as List;
-        return data.cast<Map<String, dynamic>>();
-      } else if (response.statusCode == 401) {
-        throw Exception('invalid_token');
-      }
-      return [];
-    } catch (e) {
-      print('Get cards error: $e');
-      rethrow;
-    }
-  }
-
-  // Логин для получения токена
-  Future<String?> login(String login, String password) async {
-    try {
-      final response = await _request(
-        'POST',
-        '/auth/login',
-        body: {
-          'login': login,
-          'password': password,
-        },
-      );
-      if (response is Map<String, dynamic>) {
-        return response['token'] as String?;
-      }
-      return null;
-    } catch (e) {
-      print('Login error: $e');
-      return null;
-    }
-  }
+  // Создать карту - НЕ ТРЕБУЕТ ТОКЕНА?
+  // Но лучше создать через админку или напрямую в БД
+  // Если нужен - можно добавить, но лучше через админку
 
   // Базовый метод для HTTP запросов
   Future<Object?> _request(
     String method,
     String path, {
-    String? token,
     Map<String, dynamic>? body,
   }) async {
     final client = HttpClient();
@@ -109,18 +84,27 @@ class ApiService {
     }
 
     try {
-      final request = await client.openUrl(method, _buildUri(path));
+      final uri = _buildUri(path);
+      print('📡 $method $uri');
+      
+      final request = await client.openUrl(method, uri);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-      if (token != null && token.isNotEmpty) {
-        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-      }
+      request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      
       if (body != null) {
-        request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-        request.write(jsonEncode(body));
+        final jsonBody = jsonEncode(body);
+        print('📦 Body: $jsonBody');
+        request.write(jsonBody);
       }
 
       final response = await request.close();
       final responseBody = await response.transform(utf8.decoder).join();
+      
+      print('📡 Response status: ${response.statusCode}');
+      if (responseBody.isNotEmpty) {
+        print('📡 Response: $responseBody');
+      }
+
       final parsed = responseBody.trim().isEmpty ? null : jsonDecode(responseBody);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -131,10 +115,12 @@ class ApiService {
 
       return parsed;
     } on HandshakeException catch (error) {
+      print('❌ Handshake error: $error');
       throw ApiException(
         'TLS handshake failed for $baseUrl. ${error.message}',
       );
     } on SocketException catch (error) {
+      print('❌ Socket error: $error');
       throw ApiException(
         'Failed to connect to $baseUrl. Make sure the backend is running. ${error.message}',
       );
@@ -145,8 +131,8 @@ class ApiService {
 
   Uri _buildUri(String path) {
     final normalizedBase = baseUrl.endsWith('/') ? baseUrl : '$baseUrl/';
-    return Uri.parse(normalizedBase)
-        .resolve(path.startsWith('/') ? path.substring(1) : path);
+    final cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return Uri.parse('$normalizedBase$cleanPath');
   }
 
   String? _extractError(Object? parsed) {

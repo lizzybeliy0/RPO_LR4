@@ -1,3 +1,4 @@
+// nfc_service.dart
 import 'dart:io';
 
 class NfcService {
@@ -32,7 +33,7 @@ class NfcService {
     return null;
   }
 
-  Future<String?> readCardUid({int maxAttempts = 30}) async {
+  Future<String?> readCardUid({int maxAttempts = 15}) async {
     _cachedComPort ??= await _findComPort();
     if (_cachedComPort == null) {
       print('❌ NFC device not found');

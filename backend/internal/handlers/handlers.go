@@ -851,3 +851,23 @@ func (h *Handler) NotifyPayment(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
+
+// Добавьте в handlers.go:
+
+// GetCardByNumber возвращает карту по номеру (UID)
+func (h *Handler) GetCardByNumber(c *gin.Context) {
+	cardNumber := c.Param("number")
+
+	card, err := h.svc.GetCardByNumber(cardNumber)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "card not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"balance":    card.Balance,
+		"number":     card.Number,
+		"owner_name": card.OwnerName,
+		"blocked":    card.Blocked,
+	})
+}

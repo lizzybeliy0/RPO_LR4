@@ -1,21 +1,19 @@
+// bin/console.dart
 import 'dart:io';
-import '../lib/nfc_service.dart';
-import '../lib/payment_service.dart';
+import '../lib/card_storage.dart';
 
 void main(List<String> args) async {
-  final nfc = NfcService();
-  final payment = PaymentService();
-  await payment.load();
+  final card = CardStorage();
 
   if (args.isEmpty) {
     print('''
-NFC Кошелек
+NFC Wallet - только карта, без базы данных
 
-Команды:
-  register "ФИО" [баланс]  - Зарегистрировать карту
-  pay                      - Оплатить проезд (50 руб.)
-  info                     - Информация о карте
-  list                     - Все карты
+Commands:
+  init [balance]    - Записать баланс на карту (по умолчанию 500)
+  pay               - Списать 50 руб.
+  add               - Добавить 500 руб.
+  info              - Показать баланс карты
 ''');
     return;
   }
@@ -23,84 +21,89 @@ NFC Кошелек
   final command = args[0].toLowerCase();
 
   switch (command) {
-    case 'register':
-      final name = args.length > 1 ? args[1] : null;
-      final balanceStr = args.length > 2 ? args[2] : '10000';
-      final balance = int.tryParse(balanceStr) ?? 10000;
-      
-      if (name == null) {
-        print('❌ Использование: register "ФИО" [баланс]');
-        return;
-      }
-      if (balance <= 0) {
-        print('❌ Баланс должен быть положительным');
-        return;
-      }
+    case 'init':
+      final balanceStr = args.length > 1 ? args[1] : '500';
+      final balance = int.tryParse(balanceStr) ?? 500;
       
       print('🔍 Приложите карту...');
-      final uid = await nfc.readCardUid();
+      
+      final uid = await card.readUid();
       if (uid == null) {
-        print('❌ Карта не найдена');
+        print('❌ Карта не обнаружена');
         return;
       }
-      final success = await payment.registerCard(uid, name, balance);
+      
+      print('✅ Карта: $uid');
+      print('💰 Записываем баланс $balance руб...');
+      
+      final success = await card.writeBalance(balance);
+      
       if (success) {
-        print('✅ Карта зарегистрирована: $name ($balance руб.)');
-        print('📁 Данные сохранены в data/registry.json');
+        print('✅ Баланс записан!');
+        print('   Баланс: $balance RUB');
       } else {
-        print('❌ Карта уже существует');
+        print('❌ Ошибка записи');
       }
       break;
 
     case 'pay':
-      print('💳 Приложите карту для оплаты (50 руб.)...');
-      final uid = await nfc.readCardUid();
-      if (uid == null) {
-        print('❌ Карта не найдена');
+      print('💳 Приложите карту для оплаты 50 руб...');
+      
+      final currentBalance = await card.readBalance();
+      if (currentBalance == null) {
+        print('❌ Не удалось прочитать карту');
         return;
       }
-      // terminalId = 1 (по умолчанию)
-      final success = await payment.pay(uid, 50, 1);
+      
+      if (currentBalance < 50) {
+        print('❌ Недостаточно средств: $currentBalance RUB');
+        return;
+      }
+      
+      final newBalance = currentBalance - 50;
+      final success = await card.writeBalance(newBalance);
+      
       if (success) {
-        final card = payment.getCard(uid);
-        print('✅ Оплачено 50 руб. Баланс: ${card?.balance ?? 0} руб.');
-        print('📁 Данные обновлены в data/registry.json');
+        print('✅ Оплачено 50 руб');
+        print('   Новый баланс: $newBalance RUB');
       } else {
-        print('❌ Ошибка оплаты. Карта не зарегистрирована или недостаточно средств');
+        print('❌ Ошибка оплаты');
+      }
+      break;
+
+    case 'add':
+      print('💰 Приложите карту для пополнения на 500 руб...');
+      
+      final currentBalance = await card.readBalance();
+      if (currentBalance == null) {
+        print('❌ Не удалось прочитать карту');
+        return;
+      }
+      
+      final newBalance = currentBalance + 500;
+      final success = await card.writeBalance(newBalance);
+      
+      if (success) {
+        print('✅ Пополнено 500 руб');
+        print('   Новый баланс: $newBalance RUB');
+      } else {
+        print('❌ Ошибка пополнения');
       }
       break;
 
     case 'info':
       print('🔍 Приложите карту...');
-      final uid = await nfc.readCardUid();
-      if (uid == null) {
-        print('❌ Карта не найдена');
-        return;
-      }
-      final card = payment.getCard(uid);
-      if (card == null) {
-        print('❌ Карта не зарегистрирована');
-      } else {
+      
+      final balance = await card.readBalance();
+      
+      if (balance != null) {
         print('''
-📇 ИНФОРМАЦИЯ О КАРТЕ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Владелец: ${card.ownerName}
-Баланс: ${card.balance} руб.
-UID: ${card.uid}
-Статус: ${card.status}
+💰 БАЛАНС КАРТЫ
+━━━━━━━━━━━━━
+${balance} RUB
 ''');
-      }
-      break;
-
-    case 'list':
-      final cards = payment.getCards();
-      if (cards.isEmpty) {
-        print('📭 Нет зарегистрированных карт');
       } else {
-        print('📇 ЗАРЕГИСТРИРОВАННЫЕ КАРТЫ');
-        for (final card in cards) {
-          print('${card.ownerName}: ${card.balance} руб. (UID: ${card.uid})');
-        }
+        print('❌ Не удалось прочитать карту');
       }
       break;
 
