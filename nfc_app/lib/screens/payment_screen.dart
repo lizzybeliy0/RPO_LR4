@@ -16,7 +16,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final NfcService _nfc = NfcService();
   bool _isWaiting = false;
-  bool _isProcessing = false; // Новая переменная для состояния "выполняется"
+  bool _isProcessing = false;
   int _remainingSeconds = 40;
   String _status = 'Готов к оплате';
   String? _cardOwner;
@@ -60,13 +60,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _startPayment() async {
     if (_isWaiting) return;
     _currentActionName = 'оплаты';
-    await _processTransaction(() => widget.paymentService.pay());
+    await _processTransaction(() => widget.paymentService.pay(), 50);
   }
 
   Future<void> _startReplenish() async {
     if (_isWaiting) return;
     _currentActionName = 'пополнения';
-    await _processTransaction(() => widget.paymentService.replenish());
+    await _processTransaction(() => widget.paymentService.replenish(), 500);
   }
 
   Future<void> _startSync() async {
@@ -75,10 +75,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     await _processTransaction(() async {
       final success = await widget.paymentService.syncWithBackend();
       return success ? null : '❌ Ошибка синхронизации';
-    });
+    }, 0);
   }
 
-  Future<void> _processTransaction(Future<String?> Function() transaction) async {
+  Future<void> _processTransaction(Future<String?> Function() transaction, int amount) async {
     if (!mounted) return;
     
     _operationCompleted = false;
@@ -93,86 +93,74 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _showTimeout = false;
     });
 
-    // Таймер обратного отсчета 40 секунд
+    // Таймер ожидания карты
     _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) {
+      if (!mounted || _isProcessing || _operationCompleted) {
         t.cancel();
         return;
       }
       
       setState(() {
-        if (_remainingSeconds > 0 && !_operationCompleted && !_isProcessing) {
+        if (_remainingSeconds > 0 && !_isProcessing && !_operationCompleted) {
           _remainingSeconds--;
           _status = 'Приложите карту для ${_currentActionName}... (${_remainingSeconds}с)';
         }
       });
       
-      if (_remainingSeconds <= 0 && !_operationCompleted) {
+      if (_remainingSeconds <= 0 && !_isProcessing && !_operationCompleted) {
         t.cancel();
-        _cancelOperation();
+        if (mounted) {
+          _operationCompleted = true;
+          _showMessage('⏰ Время истекло. Попробуйте снова', isTimeout: true);
+        }
       }
     });
 
-    // Ждем результат операции
+    // Запускаем операцию в фоне
     String? errorMessage;
     
-    for (int i = 0; i < 40 && !_operationCompleted && _remainingSeconds > 0; i++) {
-      errorMessage = await transaction();
+    // Ждем обнаружения карты и выполнения операции
+    errorMessage = await transaction();
+    
+    if (errorMessage == null) {
+      // Успех! Карта обнаружена и операция выполнена
+      _countdownTimer?.cancel();
+      _operationCompleted = true;
       
-      if (errorMessage == null) {
-        // Успех!
-        _operationCompleted = true;
-        _countdownTimer?.cancel();
-        
-        if (mounted) {
-          setState(() {
-            _isProcessing = false;
-          });
-          
-          final info = await widget.paymentService.getCardInfo();
-          setState(() {
-            _cardOwner = info.$2;
-            _balance = info.$3;
-          });
-          
-          String message;
-          if (_currentActionName == 'синхронизации') {
-            message = '✅ Синхронизация выполнена! Баланс: ${info.$3} руб.';
-          } else if (_currentActionName == 'оплаты') {
-            message = '✅ Оплачено 50 руб. Баланс: ${info.$3} руб.';
-          } else {
-            message = '✅ Пополнено 500 руб. Баланс: ${info.$3} руб.';
-          }
-          
-          _showMessage(message, isSuccess: true);
-        }
-        return;
-      } else if (errorMessage.isNotEmpty && !errorMessage.contains('No card detected')) {
-        // Ошибка (не "карта не найдена") - показываем сразу
-        _operationCompleted = true;
-        _countdownTimer?.cancel();
-        _showMessage(errorMessage, isError: true);
-        return;
-      } else if (errorMessage == null && i > 0) {
-        // Карта обнаружена, операция выполняется
-        if (!_isProcessing) {
-          setState(() {
-            _isProcessing = true;
-            _status = '${_currentActionName == 'оплаты' ? '💳' : (_currentActionName == 'пополнения' ? '💰' : '🔄')} ${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется... Не убирайте карту';
-          });
-        }
-        await Future.delayed(Duration(milliseconds: 500));
+      // Показываем статус выполнения (если операция еще не завершилась)
+      if (!_operationCompleted && mounted) {
+        setState(() {
+          _isProcessing = true;
+          _isWaiting = false;
+          _status = '💳 ${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется...\nНЕ УБИРАЙТЕ КАРТУ!';
+        });
       }
       
-      await Future.delayed(const Duration(milliseconds: 500));
-    }
-  }
-
-  void _cancelOperation() {
-    if (mounted && !_operationCompleted) {
+      // Небольшая задержка для отображения статуса
+      await Future.delayed(Duration(milliseconds: 500));
+      
+      if (mounted) {
+        final info = await widget.paymentService.getCardInfo();
+        setState(() {
+          _cardOwner = info.$2;
+          _balance = info.$3;
+        });
+        
+        String message;
+        if (_currentActionName == 'синхронизации') {
+          message = '✅ Синхронизация выполнена! Баланс: ${info.$3} руб.';
+        } else {
+          message = '✅ ${_currentActionName == 'оплаты' ? 'Оплачено' : 'Пополнено'} $amount руб. Баланс: ${info.$3} руб.';
+        }
+        
+        _showMessage(message, isSuccess: true);
+      }
+    } else {
+      // Ошибка
+      _countdownTimer?.cancel();
       _operationCompleted = true;
-      _showMessage('⏰ Время истекло. Попробуйте снова', isTimeout: true);
+      _showMessage(errorMessage, isError: true);
     }
   }
 
@@ -312,16 +300,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const SizedBox(height: 20),
                           ],
                           
-                          // Обычный статус (ожидание карты)
+                          // Обычный статус
                           if (!_showSuccess && !_showError && !_showTimeout) ...[
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
-                                color: _isWaiting ? Colors.orange[50] : Colors.grey[100],
+                                color: (_isWaiting || _isProcessing) ? Colors.orange[50] : Colors.grey[100],
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: _isWaiting ? Colors.orange[200]! : Colors.grey[300]!,
+                                  color: (_isWaiting || _isProcessing) ? Colors.orange[200]! : Colors.grey[300]!,
                                 ),
                               ),
                               child: Row(
@@ -339,8 +327,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                       textAlign: _isProcessing ? TextAlign.left : TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 14,
-                                        fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
-                                        color: _isWaiting ? Colors.orange[800] : Colors.grey[700],
+                                        fontWeight: (_isWaiting || _isProcessing) ? FontWeight.bold : FontWeight.normal,
+                                        color: (_isWaiting || _isProcessing) ? Colors.orange[800] : Colors.grey[700],
                                       ),
                                     ),
                                   ),

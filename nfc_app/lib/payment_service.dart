@@ -174,7 +174,6 @@ class PaymentService {
       return '❌ Карта удалена из системы! Обратитесь к администратору.';
     }
     
-    // 🔴 ПРОВЕРКА НА БЛОКИРОВКУ 🔴
     if (cardData['blocked'] == true) {
       return '❌ Карта заблокирована! Обратитесь к администратору.';
     }
@@ -222,13 +221,15 @@ class PaymentService {
       return null; // Не нашли карту - просто возвращаем null
     }
     
-    // Проверяем наличие карты в бекенде
-    final backendBalance = await _api.getCardBalance(uid);
-    if (backendBalance == null) {
+    final cardData = await _api.getCardData(uid);
+    if (cardData == null) {
       return '❌ Карта удалена из системы! Обратитесь к администратору.';
     }
     
-    // Читаем баланс с карты
+    if (cardData['blocked'] == true) {
+      return '❌ Карта заблокирована! Обратитесь к администратору.';
+    }
+    
     final currentBalance = await _card.readBalance();
     if (currentBalance == null) {
       return '❌ Не удалось прочитать карту';
