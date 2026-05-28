@@ -177,21 +177,21 @@ class PaymentService {
     // Проверяем наличие карты в бекенде
     final cardData = await _api.getCardData(uid);
     if (cardData == null) {
-      return '❌ Карта удалена из системы! Обратитесь к администратору.';
+      return 'Карта удалена из системы! Обратитесь к администратору.';
     }
     
     if (cardData['blocked'] == true) {
-      return '❌ Карта заблокирована! Обратитесь к администратору.';
+      return 'Карта заблокирована! Обратитесь к администратору.';
     }
     
     // Читаем баланс с карты
     final currentBalance = await _card.readBalance();
     if (currentBalance == null) {
-      return '❌ Не удалось прочитать карту';
+      return 'Не удалось прочитать карту';
     }
     
     if (currentBalance < 50) {
-      return '❌ Недостаточно средств! Баланс: $currentBalance руб.';
+      return 'Недостаточно средств! Баланс: $currentBalance руб.';
     }
     
     // Списываем
@@ -208,7 +208,7 @@ class PaymentService {
       );
       return null; // Успех
     } else {
-      return '❌ Ошибка при списании средств';
+      return 'Ошибка при списании средств';
     }
   }
   
@@ -231,16 +231,16 @@ class PaymentService {
     
     final cardData = await _api.getCardData(uid);
     if (cardData == null) {
-      return '❌ Карта удалена из системы! Обратитесь к администратору.';
+      return 'Карта удалена из системы! Обратитесь к администратору.';
     }
     
     if (cardData['blocked'] == true) {
-      return '❌ Карта заблокирована! Обратитесь к администратору.';
+      return 'Карта заблокирована! Обратитесь к администратору.';
     }
     
     final currentBalance = await _card.readBalance();
     if (currentBalance == null) {
-      return '❌ Не удалось прочитать карту';
+      return 'Не удалось прочитать карту';
     }
     
     // Пополняем
@@ -257,7 +257,7 @@ class PaymentService {
       );
       return null; // Успех
     } else {
-      return '❌ Ошибка при пополнении';
+      return 'Ошибка при пополнении';
     }
   }
   

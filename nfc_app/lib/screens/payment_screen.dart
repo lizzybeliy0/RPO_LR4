@@ -58,23 +58,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _startPayment() async {
-    if (_isWaiting) return;
+    if (_isWaiting || _isProcessing) return;
     _currentActionName = 'оплаты';
     await _processTransaction(() => widget.paymentService.pay(), 50);
   }
 
   Future<void> _startReplenish() async {
-    if (_isWaiting) return;
+    if (_isWaiting || _isProcessing) return;
     _currentActionName = 'пополнения';
     await _processTransaction(() => widget.paymentService.replenish(), 500);
   }
 
   Future<void> _startSync() async {
-    if (_isWaiting) return;
+    if (_isWaiting || _isProcessing) return;
     _currentActionName = 'синхронизации';
     await _processTransaction(() async {
       final success = await widget.paymentService.syncWithBackend();
-      return success ? null : '❌ Ошибка синхронизации';
+      return success ? null : 'Ошибка синхронизации';
     }, 0);
   }
 
@@ -99,7 +99,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         setState(() {
           _isProcessing = true;
           _isWaiting = false;
-          _status = '💳 ${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется...\nНЕ УБИРАЙТЕ КАРТУ!';
+          _status = '${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется...\nНЕ УБИРАЙТЕ КАРТУ!';
         });
         _countdownTimer?.cancel();
       }
@@ -124,7 +124,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         t.cancel();
         if (mounted) {
           _operationCompleted = true;
-          _showMessage('⏰ Время истекло. Попробуйте снова', isTimeout: true);
+          _showMessage('Время истекло. Попробуйте снова', isTimeout: true);
         }
       }
     });
@@ -148,9 +148,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         
         String message;
         if (_currentActionName == 'синхронизации') {
-          message = '✅ Синхронизация выполнена! Баланс: ${info.$3} руб.';
+          message = 'Синхронизация выполнена! Баланс: ${info.$3} руб.';
         } else {
-          message = '✅ ${_currentActionName == 'оплаты' ? 'Оплачено' : 'Пополнено'} $amount руб. Баланс: ${info.$3} руб.';
+          message = '${_currentActionName == 'оплаты' ? 'Оплачено' : 'Пополнено'} $amount руб. Баланс: ${info.$3} руб.';
         }
         
         _showMessage(message, isSuccess: true);
@@ -170,6 +170,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLoading = _isWaiting || _isProcessing;
+    
     return Container(
       decoration: const BoxDecoration(
         image: DecorationImage(
@@ -336,7 +338,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           Column(
                             children: [
                               PaymentButton(
-                                isLoading: _isWaiting,
+                                isLoading: isLoading,
                                 onPayPressed: _startPayment,
                                 onReplenishPressed: _startReplenish,
                               ),
@@ -344,7 +346,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isWaiting ? null : _startSync,
+                                  onPressed: isLoading ? null : _startSync,
                                   icon: const Icon(Icons.sync, color: Colors.white),
                                   label: const Text(
                                     'СИНХРОНИЗИРОВАТЬ',
