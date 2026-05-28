@@ -16,7 +16,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final NfcService _nfc = NfcService();
   bool _isWaiting = false;
-  int _remainingSeconds = 15; // 15 секунд на операцию
+  int _remainingSeconds = 20;
   String _status = 'Готов к оплате';
   String? _cardOwner;
   int? _balance;
@@ -25,13 +25,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _showTimeout = false;
   Timer? _messageTimer;
   Timer? _countdownTimer;
+  bool _operationCompleted = false;
+  String? _currentActionName;
 
-  void _showTemporaryMessage(String message, {bool isSuccess = false, bool isError = false, bool isTimeout = false}) {
+  void _showMessage(String message, {bool isSuccess = false, bool isError = false, bool isTimeout = false}) {
+    if (!mounted) return;
+    
     setState(() {
       _status = message;
       _showSuccess = isSuccess;
       _showError = isError;
       _showTimeout = isTimeout;
+      _isWaiting = false;
+      _operationCompleted = true;
     });
     
     _messageTimer?.cancel();
@@ -51,90 +57,111 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _startPayment() async {
     if (_isWaiting) return;
-    await _processTransaction(() => widget.paymentService.pay(), 50, 'оплаты');
+    _currentActionName = 'оплаты';
+    await _processTransaction(() => widget.paymentService.pay());
   }
 
   Future<void> _startReplenish() async {
     if (_isWaiting) return;
-    await _processTransaction(() => widget.paymentService.replenish(), 500, 'пополнения');
+    _currentActionName = 'пополнения';
+    await _processTransaction(() => widget.paymentService.replenish());
   }
 
   Future<void> _startSync() async {
     if (_isWaiting) return;
-    await _processTransaction(() => widget.paymentService.syncWithBackend(), 0, 'синхронизации');
+    _currentActionName = 'синхронизации';
+    await _processTransaction(() async {
+      final success = await widget.paymentService.syncWithBackend();
+      return success ? null : '❌ Ошибка синхронизации';
+    });
   }
 
-  Future<void> _processTransaction(Future<bool> Function() transaction, int amount, String actionName) async {
+  Future<void> _processTransaction(Future<String?> Function() transaction) async {
     if (!mounted) return;
+    
+    _operationCompleted = false;
     
     setState(() {
       _isWaiting = true;
-      _remainingSeconds = 15;
-      _status = 'Приложите карту для $actionName...';
+      _remainingSeconds = 20;
+      _status = 'Приложите карту для ${_currentActionName}...';
       _showSuccess = false;
       _showError = false;
       _showTimeout = false;
     });
 
-    // Таймер обратного отсчета
+    // Таймер обратного отсчета 20 секунд
     _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) {
         t.cancel();
         return;
       }
+      
       setState(() {
-        _remainingSeconds--;
-        _status = 'Приложите карту для $actionName... (${_remainingSeconds}с)';
+        if (_remainingSeconds > 0) {
+          _remainingSeconds--;
+          if (!_operationCompleted) {
+            _status = 'Приложите карту для ${_currentActionName}... (${_remainingSeconds}с)';
+          }
+        }
       });
-      if (_remainingSeconds <= 0) {
+      
+      if (_remainingSeconds <= 0 && !_operationCompleted) {
         t.cancel();
         _cancelOperation();
       }
     });
 
-    // Пытаемся выполнить операцию в течение 15 секунд
-    bool success = false;
-    for (int i = 0; i < 15 && _remainingSeconds > 0; i++) {
-      success = await transaction();
-      if (success) break;
-      await Future.delayed(const Duration(seconds: 1));
-    }
+    // Ждем результат операции (не прерываем таймер!)
+    String? errorMessage;
     
-    _countdownTimer?.cancel();
-    
-    if (!mounted) return;
-    
-    if (success) {
-      final info = await widget.paymentService.getCardInfo();
-      if (mounted) {
-        setState(() {
-          _cardOwner = info.$2;
-          _balance = info.$3;
-        });
+    // Пытаемся выполнить операцию, но не прерываем таймер
+    // Просто ждем, пока пользователь приложит карту
+    for (int i = 0; i < 20 && !_operationCompleted && _remainingSeconds > 0; i++) {
+      errorMessage = await transaction();
+      if (errorMessage != null && errorMessage.contains('No card detected')) {
+        // Карта не приложена - продолжаем ждать
+        await Future.delayed(const Duration(seconds: 1));
+        continue;
+      } else if (errorMessage == null) {
+        // Успех!
+        _operationCompleted = true;
+        _countdownTimer?.cancel();
         
-        String message;
-        if (actionName == 'синхронизации') {
-          message = 'Синхронизация выполнена! Баланс: ${info.$3} руб.';
-        } else {
-          message = amount == 50 ? 'Оплачено $amount руб.' : 'Пополнено $amount руб.';
+        if (mounted) {
+          final info = await widget.paymentService.getCardInfo();
+          setState(() {
+            _cardOwner = info.$2;
+            _balance = info.$3;
+          });
+          
+          String message;
+          if (_currentActionName == 'синхронизации') {
+            message = '✅ Синхронизация выполнена! Баланс: ${info.$3} руб.';
+          } else if (_currentActionName == 'оплаты') {
+            message = '✅ Оплачено 50 руб. Баланс: ${info.$3} руб.';
+          } else {
+            message = '✅ Пополнено 500 руб. Баланс: ${info.$3} руб.';
+          }
+          
+          _showMessage(message, isSuccess: true);
         }
-        
-        _showTemporaryMessage(message, isSuccess: true);
-        setState(() { _isWaiting = false; });
+        return;
+      } else {
+        // Ошибка (не "No card detected") - показываем сразу
+        _operationCompleted = true;
+        _countdownTimer?.cancel();
+        _showMessage(errorMessage, isError: true);
+        return;
       }
-    } else {
-      _showTemporaryMessage('Операция не удалась. Попробуйте снова', isError: true);
-      setState(() { _isWaiting = false; });
     }
   }
 
   void _cancelOperation() {
-    if (mounted) {
-      _showTemporaryMessage('Время истекло. Попробуйте снова', isTimeout: true);
-      setState(() {
-        _isWaiting = false;
-      });
+    if (mounted && !_operationCompleted) {
+      _operationCompleted = true;
+      _showMessage('⏰ Время истекло. Попробуйте снова', isTimeout: true);
     }
   }
 
@@ -190,7 +217,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                           const SizedBox(height: 24),
                           
-                          if (_showSuccess && _cardOwner != null) ...[
+                          // Успех
+                          if (_showSuccess) ...[
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
@@ -203,8 +231,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 children: [
                                   const Icon(Icons.check_circle, color: Color(0xFF2e7d32), size: 40),
                                   const SizedBox(height: 8),
-                                  Text(
-                                    '$_cardOwner',
+                                  if (_cardOwner != null) Text(
+                                    _cardOwner!,
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -213,8 +241,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Баланс: $_balance руб.',
+                                    _status,
                                     style: const TextStyle(fontSize: 14),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),
@@ -222,34 +251,83 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const SizedBox(height: 20),
                           ],
                           
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _isWaiting 
-                                  ? Colors.orange[50] 
-                                  : (_showSuccess ? Colors.green[50] : (_showError || _showTimeout ? Colors.red[50] : Colors.grey[100])),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _isWaiting 
-                                    ? Colors.orange[200]! 
-                                    : (_showSuccess ? Colors.green[200]! : (_showError || _showTimeout ? Colors.red[200]! : Colors.grey[300]!)),
+                          // Ошибка
+                          if (_showError) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.red[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.red[200]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.error, color: Colors.red[700], size: 24),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _status,
+                                      style: TextStyle(color: Colors.red[700]),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Text(
-                              _status,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
-                                color: _isWaiting ? Colors.orange[800] : (_showSuccess ? Colors.green[800] : (_showError || _showTimeout ? Colors.red[800] : Colors.grey[700])),
+                            const SizedBox(height: 20),
+                          ],
+                          
+                          // Таймаут
+                          if (_showTimeout) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.orange[200]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.timer, color: Colors.orange[700], size: 24),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _status,
+                                      style: TextStyle(color: Colors.orange[700]),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 20),
+                          ],
+                          
+                          // Обычный статус (ожидание карты)
+                          if (!_showSuccess && !_showError && !_showTimeout) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _isWaiting ? Colors.orange[50] : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _isWaiting ? Colors.orange[200]! : Colors.grey[300]!,
+                                ),
+                              ),
+                              child: Text(
+                                _status,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
+                                  color: _isWaiting ? Colors.orange[800] : Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
                           
                           const SizedBox(height: 28),
                           
-                          // Три кнопки: Оплата, Пополнение, Синхронизация
                           Column(
                             children: [
                               PaymentButton(
