@@ -11,6 +11,8 @@ class PaymentService {
     allowInsecureLocalhost: true,
   );
   final String registryPath = 'card_registry.json';
+
+  Function? onCardDetected;
   
   Future<Map<String, String>> _loadRegistry() async {
     final file = File(registryPath);
@@ -127,6 +129,8 @@ class PaymentService {
       print('❌ No card detected');
       return false;
     }
+
+    onCardDetected?.call();
     
     final backendBalance = await _api.getCardBalance(uid);
     if (backendBalance == null) {
@@ -167,6 +171,8 @@ class PaymentService {
     if (uid == null) {
       return null; // Не нашли карту - просто возвращаем null, UI покажет таймаут
     }
+
+    onCardDetected?.call();
     
     // Проверяем наличие карты в бекенде
     final cardData = await _api.getCardData(uid);
@@ -220,6 +226,8 @@ class PaymentService {
     if (uid == null) {
       return null; // Не нашли карту - просто возвращаем null
     }
+
+    onCardDetected?.call();
     
     final cardData = await _api.getCardData(uid);
     if (cardData == null) {

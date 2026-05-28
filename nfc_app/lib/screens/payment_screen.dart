@@ -93,6 +93,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _showTimeout = false;
     });
 
+    // Устанавливаем колбэк для уведомления о начале операции
+    widget.paymentService.onCardDetected = () {
+      if (mounted && !_operationCompleted) {
+        setState(() {
+          _isProcessing = true;
+          _isWaiting = false;
+          _status = '💳 ${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется...\nНЕ УБИРАЙТЕ КАРТУ!';
+        });
+        _countdownTimer?.cancel();
+      }
+    };
+    
     // Таймер ожидания карты
     _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -117,30 +129,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     });
 
-    // Запускаем операцию в фоне
-    String? errorMessage;
+    // Запускаем операцию
+    String? errorMessage = await transaction();
     
-    // Ждем обнаружения карты и выполнения операции
-    errorMessage = await transaction();
+    // Очищаем колбэк
+    widget.paymentService.onCardDetected = null;
     
-    if (errorMessage == null) {
-      // Успех! Карта обнаружена и операция выполнена
-      _countdownTimer?.cancel();
-      _operationCompleted = true;
-      
-      // Показываем статус выполнения (если операция еще не завершилась)
-      if (!_operationCompleted && mounted) {
-        setState(() {
-          _isProcessing = true;
-          _isWaiting = false;
-          _status = '💳 ${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется...\nНЕ УБИРАЙТЕ КАРТУ!';
-        });
-      }
-      
-      // Небольшая задержка для отображения статуса
-      await Future.delayed(Duration(milliseconds: 500));
-      
-      if (mounted) {
+    _operationCompleted = true;
+    _countdownTimer?.cancel();
+    
+    if (mounted) {
+      if (errorMessage == null) {
         final info = await widget.paymentService.getCardInfo();
         setState(() {
           _cardOwner = info.$2;
@@ -155,12 +154,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         }
         
         _showMessage(message, isSuccess: true);
+      } else {
+        _showMessage(errorMessage, isError: true);
       }
-    } else {
-      // Ошибка
-      _countdownTimer?.cancel();
-      _operationCompleted = true;
-      _showMessage(errorMessage, isError: true);
     }
   }
 
@@ -168,6 +164,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void dispose() {
     _messageTimer?.cancel();
     _countdownTimer?.cancel();
+    widget.paymentService.onCardDetected = null;
     super.dispose();
   }
 
@@ -216,7 +213,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           ),
                           const SizedBox(height: 24),
                           
-                          // Успех
                           if (_showSuccess) ...[
                             Container(
                               padding: const EdgeInsets.all(16),
@@ -250,7 +246,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const SizedBox(height: 20),
                           ],
                           
-                          // Ошибка
                           if (_showError) ...[
                             Container(
                               padding: const EdgeInsets.all(16),
@@ -275,7 +270,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const SizedBox(height: 20),
                           ],
                           
-                          // Таймаут
                           if (_showTimeout) ...[
                             Container(
                               padding: const EdgeInsets.all(16),
@@ -300,7 +294,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             const SizedBox(height: 20),
                           ],
                           
-                          // Обычный статус
                           if (!_showSuccess && !_showError && !_showTimeout) ...[
                             Container(
                               width: double.infinity,
