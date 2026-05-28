@@ -40,7 +40,7 @@ type Card struct {
 
 type CreateCardRequest struct {
 	Number    string `json:"number" binding:"required" example:"ab 87 7e 05" description:"Card number (UID from NFC)"`
-	Balance   int64  `json:"balance" binding:"required" example:"0" description:"Initial balance in cents"` // ← убрал min=0
+	Balance   int64  `json:"balance" example:"0" description:"Initial balance in cents"`
 	Blocked   bool   `json:"blocked" example:"false" description:"Initial blocked status"`
 	OwnerName string `json:"owner_name" binding:"required" example:"Gilenko Lesha" description:"Card owner full name"`
 	KeyID     int64  `json:"key_id" binding:"required" example:"1" description:"Associated cryptographic key ID"`
@@ -48,7 +48,7 @@ type CreateCardRequest struct {
 
 type UpdateCardRequest struct {
 	Number    string `json:"number" binding:"required" example:"ab 87 7e 05" description:"Card number (UID from NFC)"`
-	Balance   int64  `json:"balance" binding:"required" example:"0" description:"Updated balance in cents"` // ← убрал min=0
+	Balance   int64  `json:"balance" example:"0" description:"Initial balance in cents"`
 	Blocked   bool   `json:"blocked" example:"true" description:"Updated blocked status"`
 	OwnerName string `json:"owner_name" binding:"required" example:"Gilenko Lesha" description:"Updated owner full name"`
 	KeyID     int64  `json:"key_id" binding:"required" example:"1" description:"Associated cryptographic key ID"`
