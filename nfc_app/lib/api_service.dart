@@ -135,6 +135,19 @@ class ApiService {
     return Uri.parse('$normalizedBase$cleanPath');
   }
 
+  Future<Map<String, dynamic>?> getCardData(String cardNumber) async {
+    try {
+      final response = await _request('GET', '/api/v1/cards/number/$cardNumber');
+      if (response is Map<String, dynamic>) {
+        return response;
+      }
+      return null;
+    } catch (e) {
+      print('Get card data error: $e');
+      return null;
+    }
+  }
+
   String? _extractError(Object? parsed) {
     if (parsed is Map<String, dynamic>) {
       final direct = parsed['error'] ?? parsed['message'];

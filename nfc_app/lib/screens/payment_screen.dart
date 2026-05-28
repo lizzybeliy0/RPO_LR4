@@ -16,7 +16,8 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final NfcService _nfc = NfcService();
   bool _isWaiting = false;
-  int _remainingSeconds = 20;
+  bool _isProcessing = false; // Новая переменная для состояния "выполняется"
+  int _remainingSeconds = 40;
   String _status = 'Готов к оплате';
   String? _cardOwner;
   int? _balance;
@@ -37,6 +38,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       _showError = isError;
       _showTimeout = isTimeout;
       _isWaiting = false;
+      _isProcessing = false;
       _operationCompleted = true;
     });
     
@@ -83,14 +85,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
     
     setState(() {
       _isWaiting = true;
-      _remainingSeconds = 20;
+      _isProcessing = false;
+      _remainingSeconds = 40;
       _status = 'Приложите карту для ${_currentActionName}...';
       _showSuccess = false;
       _showError = false;
       _showTimeout = false;
     });
 
-    // Таймер обратного отсчета 20 секунд
+    // Таймер обратного отсчета 40 секунд
     _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) {
@@ -99,11 +102,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
       
       setState(() {
-        if (_remainingSeconds > 0) {
+        if (_remainingSeconds > 0 && !_operationCompleted && !_isProcessing) {
           _remainingSeconds--;
-          if (!_operationCompleted) {
-            _status = 'Приложите карту для ${_currentActionName}... (${_remainingSeconds}с)';
-          }
+          _status = 'Приложите карту для ${_currentActionName}... (${_remainingSeconds}с)';
         }
       });
       
@@ -113,23 +114,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     });
 
-    // Ждем результат операции (не прерываем таймер!)
+    // Ждем результат операции
     String? errorMessage;
     
-    // Пытаемся выполнить операцию, но не прерываем таймер
-    // Просто ждем, пока пользователь приложит карту
-    for (int i = 0; i < 20 && !_operationCompleted && _remainingSeconds > 0; i++) {
+    for (int i = 0; i < 40 && !_operationCompleted && _remainingSeconds > 0; i++) {
       errorMessage = await transaction();
-      if (errorMessage != null && errorMessage.contains('No card detected')) {
-        // Карта не приложена - продолжаем ждать
-        await Future.delayed(const Duration(seconds: 1));
-        continue;
-      } else if (errorMessage == null) {
+      
+      if (errorMessage == null) {
         // Успех!
         _operationCompleted = true;
         _countdownTimer?.cancel();
         
         if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+          
           final info = await widget.paymentService.getCardInfo();
           setState(() {
             _cardOwner = info.$2;
@@ -148,13 +148,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _showMessage(message, isSuccess: true);
         }
         return;
-      } else {
-        // Ошибка (не "No card detected") - показываем сразу
+      } else if (errorMessage.isNotEmpty && !errorMessage.contains('No card detected')) {
+        // Ошибка (не "карта не найдена") - показываем сразу
         _operationCompleted = true;
         _countdownTimer?.cancel();
         _showMessage(errorMessage, isError: true);
         return;
+      } else if (errorMessage == null && i > 0) {
+        // Карта обнаружена, операция выполняется
+        if (!_isProcessing) {
+          setState(() {
+            _isProcessing = true;
+            _status = '${_currentActionName == 'оплаты' ? '💳' : (_currentActionName == 'пополнения' ? '💰' : '🔄')} ${_currentActionName == 'оплаты' ? 'Оплата' : (_currentActionName == 'пополнения' ? 'Пополнение' : 'Синхронизация')} выполняется... Не убирайте карту';
+          });
+        }
+        await Future.delayed(Duration(milliseconds: 500));
       }
+      
+      await Future.delayed(const Duration(milliseconds: 500));
     }
   }
 
@@ -313,14 +324,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                   color: _isWaiting ? Colors.orange[200]! : Colors.grey[300]!,
                                 ),
                               ),
-                              child: Text(
-                                _status,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
-                                  color: _isWaiting ? Colors.orange[800] : Colors.grey[700],
-                                ),
+                              child: Row(
+                                children: [
+                                  if (_isProcessing)
+                                    const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  if (_isProcessing) const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      _status,
+                                      textAlign: _isProcessing ? TextAlign.left : TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: _isWaiting ? FontWeight.bold : FontWeight.normal,
+                                        color: _isWaiting ? Colors.orange[800] : Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 20),
