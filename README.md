@@ -43,4 +43,18 @@ go run ./cmd/server
 flutter run -d windows --release    
 ```
 
+a3  fc  7d  05
+21 карта
+
+# Регистрация карты
+dart run bin/nfc_wallet.dart register "Иван Петров" 500
+
+# Проверить инфо
+dart run bin/nfc_wallet.dart info
+
+# Оплатить
+dart run bin/nfc_wallet.dart pay
+
+# Пополнить
+dart run bin/nfc_wallet.dart replenish
 

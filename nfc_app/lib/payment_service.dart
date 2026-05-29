@@ -31,7 +31,6 @@ class PaymentService {
   }
   
   Future<(String? uid, String? ownerName, int? balance)> getCardInfo() async {
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();
@@ -41,6 +40,7 @@ class PaymentService {
     
     if (uid == null) return (null, null, null);
     
+    // 🔴 ИСПРАВЛЕНО: используем readBalance
     final balance = await _card.readBalance();
     final registry = await _loadRegistry();
     final ownerName = registry[uid];
@@ -55,7 +55,6 @@ class PaymentService {
   Future<bool> initCard(String ownerName, int initialBalance) async {
     print('   Tap your card to initialize...');
     
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 60; i++) {
       uid = await _card.readUid();
@@ -74,6 +73,10 @@ class PaymentService {
     registry[uid] = ownerName;
     await _saveRegistry(registry);
     
+    // 🔴 ИСПРАВЛЕНО: используем updateBalance для установки начального баланса
+    // Для инициализации нужно установить баланс, а не изменить на дельту
+    // Поэтому используем отдельный метод или читаем и записываем
+    // Пока оставим writeBalance, но его нужно добавить обратно
     final success = await _card.writeBalance(initialBalance);
     
     if (success) {
@@ -87,7 +90,6 @@ class PaymentService {
   }
   
   Future<bool> _isCardInBackend() async {
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();
@@ -102,7 +104,6 @@ class PaymentService {
   }
   
   Future<int?> getBackendBalance() async {
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();
@@ -117,7 +118,6 @@ class PaymentService {
   Future<bool> syncWithBackend() async {
     print('   Syncing with backend...');
     
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();
@@ -143,6 +143,8 @@ class PaymentService {
     print('   !Card balance: $cardBalance RUB');
     
     if (backendBalance != cardBalance) {
+      // 🔴 ИСПРАВЛЕНО: для синхронизации нужно установить конкретный баланс
+      // updateBalance с дельтой не подходит, нужен writeBalance
       final success = await _card.writeBalance(backendBalance);
       if (success) {
         print('   !!!Card synced! New balance: $backendBalance RUB');
@@ -157,9 +159,9 @@ class PaymentService {
     }
   }
 
-  // Возвращает null при успехе, иначе строку с ошибкой
+// lib/payment_service.dart - исправленный pay()
+
   Future<String?> pay() async {
-    // Ждем карту до 20 секунд (UI сам отсчитывает время)
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();
@@ -167,13 +169,10 @@ class PaymentService {
       await Future.delayed(Duration(seconds: 1));
     }
     
-    if (uid == null) {
-      return null; // Не нашли карту - просто возвращаем null, UI покажет таймаут
-    }
+    if (uid == null) return null;
 
     onCardDetected?.call();
     
-    // Проверяем наличие карты в бекенде
     final cardData = await _api.getCardData(uid);
     if (cardData == null) {
       return 'Карта удалена из системы! Обратитесь к администратору.';
@@ -183,38 +182,23 @@ class PaymentService {
       return 'Карта заблокирована! Обратитесь к администратору.';
     }
     
-    // Читаем баланс с карты
-    final currentBalance = await _card.readBalance();
-    if (currentBalance == null) {
-      return 'Не удалось прочитать карту';
-    }
+    final result = await _card.updateBalance(-50);
     
-    if (currentBalance < 50) {
-      return 'Недостаточно средств! Баланс: $currentBalance руб.';
-    }
-    
-    // Списываем
-    final newBalance = currentBalance - 50;
-    final success = await _card.writeBalance(newBalance);
-    
-    if (success) {
-      print('   Payment: 50 RUB, new balance: $newBalance RUB');
+    if (result.success) {
+      print('   Payment: 50 RUB successful, new balance: ${result.newBalance}');
       await _api.notifyPayment(
         cardNumber: uid,
         amount: 50,
         terminalId: 1,
-        newBalance: newBalance,
+        newBalance: result.newBalance!,
       );
-      return null; // Успех
+      return null;
     } else {
-      return 'Ошибка при списании средств';
+      return result.error;  // ← точное сообщение об ошибке
     }
   }
-  
-  // Возвращает null при успехе, иначе строку с ошибкой
-  // НЕ возвращает ошибку если карта просто не приложена - даем 20 секунд в UI
+
   Future<String?> replenish() async {
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();
@@ -222,9 +206,7 @@ class PaymentService {
       await Future.delayed(Duration(seconds: 1));
     }
     
-    if (uid == null) {
-      return null; // Не нашли карту - просто возвращаем null
-    }
+    if (uid == null) return null;
 
     onCardDetected?.call();
     
@@ -237,31 +219,23 @@ class PaymentService {
       return 'Карта заблокирована! Обратитесь к администратору.';
     }
     
-    final currentBalance = await _card.readBalance();
-    if (currentBalance == null) {
-      return 'Не удалось прочитать карту';
-    }
+    final result = await _card.updateBalance(500);
     
-    // Пополняем
-    final newBalance = currentBalance + 500;
-    final success = await _card.writeBalance(newBalance);
-    
-    if (success) {
-      print('   Replenishment: +500 RUB, new balance: $newBalance RUB');
+    if (result.success) {
+      print('   Replenishment: +500 RUB successful, new balance: ${result.newBalance}');
       await _api.notifyPayment(
         cardNumber: uid,
         amount: 500,
         terminalId: 1,
-        newBalance: newBalance,
+        newBalance: result.newBalance!,
       );
-      return null; // Успех
+      return null;
     } else {
-      return 'Ошибка при пополнении';
+      return result.error;
     }
   }
-  
+
   Future<int?> checkBalance() async {
-    // Ждем карту до 20 секунд
     String? uid;
     for (int i = 0; i < 40; i++) {
       uid = await _card.readUid();

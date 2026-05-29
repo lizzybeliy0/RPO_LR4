@@ -100,14 +100,14 @@ func (ct *CustomTime) UnmarshalJSON(b []byte) error {
 }
 
 type CreateTransactionRequest struct {
-	Amount     int64       `json:"amount" binding:"required,min=1" example:"150" description:"Transaction amount in cents"`
+	Amount     int64       `json:"amount" binding:"required" example:"150" description:"Transaction amount in cents (positive for deposit, negative for withdrawal)"` // ← убран min=1
 	CardID     int64       `json:"card_id" binding:"required" example:"1" description:"Associated card ID"`
-	TerminalID int64       `json:"terminal_id" binding:"required" example:"1" description:"Associated terminal ID"`
+	TerminalID int64       `json:"terminal_id" example:"0" description:"Associated terminal ID (0 for deposit)"`
 	CreatedAt  *CustomTime `json:"created_at" example:"17.04.2026 10:30"`
 }
 
 type UpdateTransactionRequest struct {
-	Amount     int64      `json:"amount" binding:"required,min=1" example:"150"`
+	Amount     int64      `json:"amount" binding:"required" example:"150" description:"Transaction amount (positive for deposit, negative for withdrawal)"` // ← убран min=1
 	CardID     int64      `json:"card_id" binding:"required" example:"1"`
 	TerminalID int64      `json:"terminal_id" binding:"required" example:"1"`
 	CreatedAt  CustomTime `json:"created_at" binding:"required" example:"17.04.2026 10:30"`

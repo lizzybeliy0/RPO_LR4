@@ -37,7 +37,7 @@ class ApiService {
     }
   }
 
-  // Уведомление об оплате - НЕ ТРЕБУЕТ ТОКЕНА!
+  // Уведомление об оплате 
   Future<bool> notifyPayment({
     required String cardNumber,
     required int amount,

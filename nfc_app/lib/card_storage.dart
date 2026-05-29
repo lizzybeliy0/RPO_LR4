@@ -2,6 +2,38 @@
 import 'dart:io';
 import 'dart:convert';
 
+class UpdateResult {
+  final bool success;
+  final int? newBalance;
+  final String? error;
+  
+  UpdateResult({required this.success, this.newBalance, this.error});
+  
+  factory UpdateResult.ok(int balance) => 
+      UpdateResult(success: true, newBalance: balance, error: null);
+  
+  factory UpdateResult.insufficientFunds(int oldBalance) => 
+      UpdateResult(
+        success: false, 
+        newBalance: null, 
+        error: 'Недостаточно средств! Баланс: $oldBalance руб.'
+      );
+  
+  factory UpdateResult.readError() => 
+      UpdateResult(
+        success: false, 
+        newBalance: null, 
+        error: 'Не удалось прочитать карту. Проверьте, что карта приложена.'
+      );
+  
+  factory UpdateResult.writeError() => 
+      UpdateResult(
+        success: false, 
+        newBalance: null, 
+        error: 'Ошибка при записи на карту. Попробуйте снова.'
+      );
+}
+
 class CardStorage {
   final String nfcListPath = r'C:\Users\Lizaveta\MGTU_Study\rpo2\lab4\libs\libnfc\build\utils\nfc-list.exe';
   final String nfcMfClassicPath = r'C:\Users\Lizaveta\MGTU_Study\rpo2\lab4\libs\libnfc\build\utils\nfc-mfclassic.exe';
@@ -73,7 +105,7 @@ class CardStorage {
     }
   }
   
-  // Прочитать баланс с карты
+  // Прочитать баланс с карты (без изменения)
   Future<int?> readBalance() async {
     try {
       final env = await _getEnv();
@@ -91,14 +123,10 @@ class CardStorage {
       
       if (result.exitCode == 0 && await tempFile.exists()) {
         final bytes = await tempFile.readAsBytes();
-        await tempFile.delete();
+        if (await tempFile.exists()) await tempFile.delete();
         
         if (bytes.length >= 68) {
-          // Баланс в блоке 4 (байты 64-67)
-          final balance = bytes[64] | 
-                          (bytes[65] << 8) | 
-                          (bytes[66] << 16) | 
-                          (bytes[67] << 24);
+          final balance = bytes[64] | (bytes[65] << 8) | (bytes[66] << 16) | (bytes[67] << 24);
           return balance;
         }
       }
@@ -107,8 +135,8 @@ class CardStorage {
       return null;
     }
   }
-  
 
+  // Записать конкретный баланс на карту (для инициализации и синхронизации)
   Future<bool> writeBalance(int balance) async {
     try {
       print('     Writing balance $balance to card...');
@@ -116,7 +144,6 @@ class CardStorage {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final tempFile = File('temp_$timestamp.bin');
       
-      // Читаем текущий дамп
       final readResult = await Process.run(
         nfcMfClassicPath,
         ['r', defaultKey, 'u', tempFile.path],
@@ -127,9 +154,8 @@ class CardStorage {
       await Future.delayed(Duration(milliseconds: 500));
       
       if (readResult.exitCode != 0) {
-        print('   Failed to read card (exitCode=${readResult.exitCode})');
-        print('   Error: ${readResult.stderr}');
-        await tempFile.delete();
+        print('   Failed to read card');
+        if (await tempFile.exists()) await tempFile.delete();
         return false;
       }
       
@@ -139,69 +165,116 @@ class CardStorage {
       }
       
       final bytes = await tempFile.readAsBytes();
-      print('   Read existing dump, size: ${bytes.length} bytes');
       
       if (bytes.length < 68) {
-        print('   Dump too small: ${bytes.length} bytes');
-        await tempFile.delete();
+        print('   Dump too small');
+        if (await tempFile.exists()) await tempFile.delete();
         return false;
       }
       
       final oldBalance = bytes[64] | (bytes[65] << 8) | (bytes[66] << 16) | (bytes[67] << 24);
-      print('   Old balance from dump: $oldBalance');
+      print('   Old balance: $oldBalance → New balance: $balance');
       
-      if (bytes.length >= 68) {
-        // Обновляем баланс
-        bytes[64] = balance & 0xFF;
-        bytes[65] = (balance >> 8) & 0xFF;
-        bytes[66] = (balance >> 16) & 0xFF;
-        bytes[67] = (balance >> 24) & 0xFF;
-        
-        print('   New balance bytes: ${bytes[64]} ${bytes[65]} ${bytes[66]} ${bytes[67]}');
-        
-        await tempFile.writeAsBytes(bytes);
-        
-        // Записываем на карту
-        final writeResult = await Process.run(
-          nfcMfClassicPath,
-          ['w', defaultKey, 'u', tempFile.path],
-          environment: env,
-          runInShell: true,
-        ).timeout(Duration(seconds: 30));
-        
-        if (writeResult.exitCode == 0) {
-          print('   !!!Write successful!');
-          
-          // ПРОВЕРЯЕМ: читаем баланс сразу после записи
-          await Future.delayed(Duration(milliseconds: 500));
-          final verifyBalance = await readBalance();
-          print('   Verification read: $verifyBalance RUB');
-          
-          if (verifyBalance == balance) {
-            print('   !!!Balance verified!');
-            await tempFile.delete();
-            return true;
-          } else {
-            print('   Balance verification FAILED! Expected $balance, got $verifyBalance');
-            await tempFile.delete();
-            return false;
-          }
-        } else {
-          print('   Write failed with exit code: ${writeResult.exitCode}');
-          print('   Error: ${writeResult.stderr}');
-          await tempFile.delete();
-          return false;
-        }
+      bytes[64] = balance & 0xFF;
+      bytes[65] = (balance >> 8) & 0xFF;
+      bytes[66] = (balance >> 16) & 0xFF;
+      bytes[67] = (balance >> 24) & 0xFF;
+      
+      await tempFile.writeAsBytes(bytes);
+      
+      final writeResult = await Process.run(
+        nfcMfClassicPath,
+        ['w', defaultKey, 'u', tempFile.path],
+        environment: env,
+        runInShell: true,
+      ).timeout(Duration(seconds: 30));
+      
+      if (await tempFile.exists()) await tempFile.delete();
+      
+      if (writeResult.exitCode == 0) {
+        print('   ✅ Balance written successfully!');
+        return true;
+      } else {
+        print('   Write failed');
+        return false;
       }
-      
-      await tempFile.delete();
-      return false;
     } catch (e) {
       print('   Error writing balance: $e');
       return false;
     }
   }
 
+  Future<UpdateResult> updateBalance(int delta) async {
+    try {
+      print('     Updating balance by $delta...');
+      final env = await _getEnv();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final tempFile = File('temp_$timestamp.bin');
+      
+      final readResult = await Process.run(
+        nfcMfClassicPath,
+        ['r', defaultKey, 'u', tempFile.path],
+        environment: env,
+        runInShell: true,
+      ).timeout(Duration(seconds: 30));
+
+      await Future.delayed(Duration(milliseconds: 500));
+      
+      if (readResult.exitCode != 0) {
+        if (await tempFile.exists()) await tempFile.delete();
+        return UpdateResult.readError();
+      }
+      
+      if (!await tempFile.exists()) {
+        return UpdateResult.readError();
+      }
+      
+      final bytes = await tempFile.readAsBytes();
+      
+      if (bytes.length < 68) {
+        if (await tempFile.exists()) await tempFile.delete();
+        return UpdateResult.readError();
+      }
+      
+      final oldBalance = bytes[64] | (bytes[65] << 8) | (bytes[66] << 16) | (bytes[67] << 24);
+      final newBalance = oldBalance + delta;
+      
+      // Проверка на недостаточность средств
+      if (newBalance < 0) {
+        if (await tempFile.exists()) await tempFile.delete();
+        return UpdateResult.insufficientFunds(oldBalance);
+      }
+      
+      print('   Old balance: $oldBalance → New balance: $newBalance');
+      
+      //1 блок из 4 сектора 1 из 16 (1 блок 64 байта)
+      bytes[64] = newBalance & 0xFF;
+      bytes[65] = (newBalance >> 8) & 0xFF;
+      bytes[66] = (newBalance >> 16) & 0xFF;
+      bytes[67] = (newBalance >> 24) & 0xFF;
+      
+      await tempFile.writeAsBytes(bytes);
+      
+      final writeResult = await Process.run(
+        nfcMfClassicPath,
+        ['w', defaultKey, 'u', tempFile.path],
+        environment: env,
+        runInShell: true,
+      ).timeout(Duration(seconds: 30));
+      
+      if (await tempFile.exists()) await tempFile.delete();
+      
+      if (writeResult.exitCode == 0) {
+        print('   ✅ Balance updated successfully! New balance: $newBalance');
+        return UpdateResult.ok(newBalance);
+      } else {
+        return UpdateResult.writeError();
+      }
+    } catch (e) {
+      print('   Error updating balance: $e');
+      return UpdateResult.readError();
+    }
+  }
 
   String? _parseUid(String output) {
     final lines = output.split('\n');
