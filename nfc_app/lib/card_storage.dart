@@ -33,7 +33,7 @@ class CardStorage {
           
           if (testResult.exitCode == 0 && 
               (testResult.stdout as String).contains('NFC device:')) {
-            print('✅ Device found on $port');
+            print('   Device found on $port');
             return port;
           }
         } catch (e) {
@@ -111,7 +111,7 @@ class CardStorage {
 
   Future<bool> writeBalance(int balance) async {
     try {
-      print('   💾 Writing balance $balance to card...');
+      print('     Writing balance $balance to card...');
       final env = await _getEnv();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final tempFile = File('temp_$timestamp.bin');
@@ -127,28 +127,28 @@ class CardStorage {
       await Future.delayed(Duration(milliseconds: 500));
       
       if (readResult.exitCode != 0) {
-        print('   ❌ Failed to read card (exitCode=${readResult.exitCode})');
+        print('   Failed to read card (exitCode=${readResult.exitCode})');
         print('   Error: ${readResult.stderr}');
         await tempFile.delete();
         return false;
       }
       
       if (!await tempFile.exists()) {
-        print('   ❌ Dump file not created');
+        print('   Dump file not created');
         return false;
       }
       
       final bytes = await tempFile.readAsBytes();
-      print('   📖 Read existing dump, size: ${bytes.length} bytes');
+      print('   Read existing dump, size: ${bytes.length} bytes');
       
       if (bytes.length < 68) {
-        print('   ❌ Dump too small: ${bytes.length} bytes');
+        print('   Dump too small: ${bytes.length} bytes');
         await tempFile.delete();
         return false;
       }
       
       final oldBalance = bytes[64] | (bytes[65] << 8) | (bytes[66] << 16) | (bytes[67] << 24);
-      print('   📊 Old balance from dump: $oldBalance');
+      print('   Old balance from dump: $oldBalance');
       
       if (bytes.length >= 68) {
         // Обновляем баланс
@@ -157,7 +157,7 @@ class CardStorage {
         bytes[66] = (balance >> 16) & 0xFF;
         bytes[67] = (balance >> 24) & 0xFF;
         
-        print('   📝 New balance bytes: ${bytes[64]} ${bytes[65]} ${bytes[66]} ${bytes[67]}');
+        print('   New balance bytes: ${bytes[64]} ${bytes[65]} ${bytes[66]} ${bytes[67]}');
         
         await tempFile.writeAsBytes(bytes);
         
@@ -170,24 +170,24 @@ class CardStorage {
         ).timeout(Duration(seconds: 30));
         
         if (writeResult.exitCode == 0) {
-          print('   ✅ Write successful!');
+          print('   !!!Write successful!');
           
           // ПРОВЕРЯЕМ: читаем баланс сразу после записи
           await Future.delayed(Duration(milliseconds: 500));
           final verifyBalance = await readBalance();
-          print('   🔍 Verification read: $verifyBalance RUB');
+          print('   Verification read: $verifyBalance RUB');
           
           if (verifyBalance == balance) {
-            print('   ✅ Balance verified!');
+            print('   !!!Balance verified!');
             await tempFile.delete();
             return true;
           } else {
-            print('   ❌ Balance verification FAILED! Expected $balance, got $verifyBalance');
+            print('   Balance verification FAILED! Expected $balance, got $verifyBalance');
             await tempFile.delete();
             return false;
           }
         } else {
-          print('   ❌ Write failed with exit code: ${writeResult.exitCode}');
+          print('   Write failed with exit code: ${writeResult.exitCode}');
           print('   Error: ${writeResult.stderr}');
           await tempFile.delete();
           return false;
@@ -197,7 +197,7 @@ class CardStorage {
       await tempFile.delete();
       return false;
     } catch (e) {
-      print('   ❌ Error writing balance: $e');
+      print('   Error writing balance: $e');
       return false;
     }
   }

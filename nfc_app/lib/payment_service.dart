@@ -53,7 +53,7 @@ class PaymentService {
   }
   
   Future<bool> initCard(String ownerName, int initialBalance) async {
-    print('🔍 Tap your card to initialize...');
+    print('   Tap your card to initialize...');
     
     // Ждем карту до 20 секунд
     String? uid;
@@ -64,11 +64,11 @@ class PaymentService {
     }
     
     if (uid == null) {
-      print('❌ No card detected');
+      print('   No card detected');
       return false;
     }
     
-    print('✅ Card detected: $uid');
+    print('   !!!Card detected: $uid');
     
     final registry = await _loadRegistry();
     registry[uid] = ownerName;
@@ -77,11 +77,11 @@ class PaymentService {
     final success = await _card.writeBalance(initialBalance);
     
     if (success) {
-      print('✅ Card initialized with $initialBalance RUB');
+      print('   Card initialized with $initialBalance RUB');
       print('   Owner: $ownerName');
       return true;
     } else {
-      print('❌ Failed to write to card');
+      print('   Failed to write to card');
       return false;
     }
   }
@@ -115,7 +115,7 @@ class PaymentService {
   }
   
   Future<bool> syncWithBackend() async {
-    print('🔄 Syncing with backend...');
+    print('   Syncing with backend...');
     
     // Ждем карту до 20 секунд
     String? uid;
@@ -126,7 +126,7 @@ class PaymentService {
     }
     
     if (uid == null) {
-      print('❌ No card detected');
+      print('   No card detected');
       return false;
     }
 
@@ -134,31 +134,30 @@ class PaymentService {
     
     final backendBalance = await _api.getCardBalance(uid);
     if (backendBalance == null) {
-      print('❌ Card not found in backend');
+      print('   Card not found in backend');
       return false;
     }
     
     final cardBalance = await _card.readBalance();
-    print('💰 Backend balance: $backendBalance RUB');
-    print('💳 Card balance: $cardBalance RUB');
+    print('   !Backend balance: $backendBalance RUB');
+    print('   !Card balance: $cardBalance RUB');
     
     if (backendBalance != cardBalance) {
       final success = await _card.writeBalance(backendBalance);
       if (success) {
-        print('✅ Card synced! New balance: $backendBalance RUB');
+        print('   !!!Card synced! New balance: $backendBalance RUB');
         return true;
       } else {
-        print('❌ Failed to write to card');
+        print('   Failed to write to card');
         return false;
       }
     } else {
-      print('✅ Balances already in sync');
+      print('   !!!Balances already in sync');
       return true;
     }
   }
 
   // Возвращает null при успехе, иначе строку с ошибкой
-  // НЕ возвращает ошибку если карта просто не приложена - даем 20 секунд в UI
   Future<String?> pay() async {
     // Ждем карту до 20 секунд (UI сам отсчитывает время)
     String? uid;
@@ -199,7 +198,7 @@ class PaymentService {
     final success = await _card.writeBalance(newBalance);
     
     if (success) {
-      print('✅ Payment: 50 RUB, new balance: $newBalance RUB');
+      print('   Payment: 50 RUB, new balance: $newBalance RUB');
       await _api.notifyPayment(
         cardNumber: uid,
         amount: 50,
@@ -248,7 +247,7 @@ class PaymentService {
     final success = await _card.writeBalance(newBalance);
     
     if (success) {
-      print('✅ Replenishment: +500 RUB, new balance: $newBalance RUB');
+      print('   Replenishment: +500 RUB, new balance: $newBalance RUB');
       await _api.notifyPayment(
         cardNumber: uid,
         amount: 500,
